@@ -6,7 +6,6 @@ from numpy.core.defchararray import index
 from numpy.core.einsumfunc import _flop_count
 from numpy.core.numeric import indices
 
-# Designing the new Classes
 
 from scipy.optimize import fsolve
 from scipy.optimize.zeros import _results_select
