@@ -100,7 +100,6 @@ momentum_Proj_Neg_odd = lambda L, kappal, k: (2)*np.sqrt(L/np.pi)/np.sqrt(1+np.s
 class Particle_in_Box_State:
     _L = np.pi
     _gamma = 0
-    _bound = 0
 
     _energy_states = None
     _energy_proj_coeff = None
@@ -119,18 +118,7 @@ class Particle_in_Box_State:
     _momentum_kn = None
     _momentum_k = None
 
-    _momentum_proj_coeff_matrix_cont = None
-    _momentum_proj_coeff_matrix_disc = None
-
-    _momentum_proj_coeff_cont = None
-    _momentum_proj_coeff_disc = None
-    _momentum_prob_distr_cont = None
-    _momentum_prob_distr_disc = None
     _num_energy_states = 0
-    _num_momentum_states_cont = 0
-
-    _cStep = 0.01
-    _dStep = 1
 
     _m = 1
 
@@ -149,8 +137,6 @@ class Particle_in_Box_State:
     def add_pos_space_func_component(self, the_state: int):
         index = self._energy_states.index(the_state)
         the_k = self._k_kappa_l_array[index]
-        the_energy = self._energy_state_energies[index]
-        the_coeff = self._energy_proj_coeff[index]
         
         if the_state%2 == 0:
             if np.imag(the_k)==0:
@@ -170,8 +156,6 @@ class Particle_in_Box_State:
     def add_momentum_space_func_component(self, the_state: int, continuous: bool):
         index = self._energy_states.index(the_state)
         the_k = self._k_kappa_l_array[index]
-        the_energy = self._energy_state_energies[index]
-        the_coeff = self._energy_proj_coeff[index]
 
         if the_state%2 == 0:
             if np.imag(the_k) == 0:
@@ -258,7 +242,6 @@ class Particle_in_Box_State:
         self.momentum_space_func_recombine(True)
         self.momentum_space_func_recombine(False)
 
-
     def normalize(self):
         if self._num_energy_states == 0:
             return 0
@@ -266,17 +249,13 @@ class Particle_in_Box_State:
             Total = np.sum(np.power(np.abs(self._energy_proj_coeff), 2))
             self._energy_proj_coeff = self._energy_proj_coeff*(1/np.sqrt(Total))
         
-    def __init__(self, gamma, L, energy_states, amplitudes, momentum_k_max, momentum_k_min):
+    def __init__(self, gamma, L, energy_states, amplitudes):
         self._gamma = gamma
         self._L = L
-        self._momentum_k = np.arange(momentum_k_min, momentum_k_max, self._cStep)*np.pi/L
-        self._momentum_kn = np.arange(momentum_k_min, momentum_k_max, self._dStep)*np.pi/L
 
         self._energy_states = []
         self._energy_state_energies = []
         self._k_kappa_l_array = []
-        self._momentum_proj_coeff_matrix_cont = []
-        self._momentum_proj_coeff_matrix_disc = []
         self._energy_proj_coeff = np.empty(0)
 
         self._pos_space_wavefunc = Function_of_array_and_t(lambda x,t: 0)
@@ -332,38 +311,6 @@ class Particle_in_Box_State:
     @gamma.setter
     def gamma(self, new_gamma):
         self._gamma = new_gamma
-
-    @property
-    def bound(self):
-        """Remember to call [self.property_change_complete_recompute] after calling the setter"""
-        return self._bound
-    
-    @bound.setter
-    def bound(self, new_bound):
-        new_bound = int(new_bound)
-        self._bound = new_bound
-        self._momentum_k = np.arange(-new_bound, new_bound, self._cStep)
-        self._momentum_kn = np.arange(-new_bound, new_bound, self._dStep)
-
-    @property
-    def cStep(self):
-        """Remember to call [self.property_change_complete_recompute] after calling the setter"""
-        return self._cStep
-    
-    @cStep.setter
-    def cStep(self, new_cStep):
-        self._cStep = new_cStep
-        self._momentum_k = np.arange(-self._bound, self._bound, new_cStep)
-
-    @property
-    def momentum_k(self):
-        """Remember to call [self.property_change_complete_recompute] after calling the setter"""
-        return self._momentum_k
-
-    @property
-    def momentum_kn(self):
-        """Remember to call [self.property_change_complete_recompute] after calling the setter"""
-        return self._momentum_kn
 
     
 class State_Plot:
