@@ -271,6 +271,7 @@ class Particle_in_Box_State:
     def pos_space_func_recombine(self):
         self._pos_space_wavefunc = Function_of_array_and_t(lambda x,t:0)
         for state_index in range(self._num_energy_states):
+            print("recombining pos space wavefunc...")
             wiggleFactor = Function_of_array_and_t(lambda x,t: np.exp(-1j*self._energy_state_energies[state_index]*t))
             self._pos_space_wavefunc += self._energy_proj_coeff[state_index]*self._pos_space_wavefunc_components[state_index]*wiggleFactor
             
