@@ -85,7 +85,6 @@ class Function_of_array_and_t(object):
         return self.__mul__(other)
 
 
-
 psi_l_Pos_odd = lambda L, kl, x: np.sqrt(2/L)*np.power(1+np.sin(kl*L)/(kl*L), -1/2)*np.cos(kl*x)
 psi_l_Pos_even = lambda L, kl, x: np.sqrt(2/L)*np.power(1-np.sin(kl*L)/(kl*L), -1/2)*np.sin(kl*x)
 psi_l_Neg_odd = lambda L, kappal, x: np.sqrt(2/L)*np.power(1+np.sinh(kappal*L)/(kappal*L), -1/2)*np.cosh(kappal*x)
@@ -282,13 +281,11 @@ class Particle_in_Box_State:
         if continuous==True:
             self._cont_momentum_space_wavefunc = Function_of_array_and_t(lambda x,t:0)
             for state_index in range(self._num_energy_states):
-                wiggleFactor = Function_of_array_and_t(lambda x,t: np.exp(-1j*self._energy_state_energies[state_index]*t))
-                self._cont_momentum_space_wavefunc += self._energy_proj_coeff[state_index]*self._cont_momentum_space_wavefunc_components[state_index]*wiggleFactor
+                self._cont_momentum_space_wavefunc += self._energy_proj_coeff[state_index]*self._cont_momentum_space_wavefunc_components[state_index]
         else:
             self._disc_momentum_space_wavefunc = Function_of_array_and_t(lambda x,t:0)
             for state_index in range(self._num_energy_states):
-                wiggleFactor = Function_of_array_and_t(lambda x,t: np.exp(-1j*self._energy_state_energies[state_index]*t))
-                self._disc_momentum_space_wavefunc += self._energy_proj_coeff[state_index]*self._disc_momentum_space_wavefunc_components[state_index]*wiggleFactor
+                self._disc_momentum_space_wavefunc += self._energy_proj_coeff[state_index]*self._disc_momentum_space_wavefunc_components[state_index]
     
     def change_energy_proj_coeff(self, the_state, the_coeff):
         self._energy_proj_coeff[self._energy_states.index(the_state)] = the_coeff
