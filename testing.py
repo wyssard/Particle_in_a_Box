@@ -1,14 +1,7 @@
-from types import LambdaType
 from typing import Callable
 import numpy as np
 from copy import deepcopy
-from numpy.core.defchararray import index
-from numpy.core.einsumfunc import _flop_count
-from numpy.core.numeric import indices
-
-
 from scipy.optimize import fsolve
-from scipy.optimize.zeros import _results_select
 
 posRelEven = lambda g, k: g-np.arctan(k*np.tan(k/2))
 posRelOdd = lambda g, k: g+np.arctan(k/(np.tan(k/2)))
@@ -168,8 +161,8 @@ class Particle_in_Box_State:
         current_amplitude_config = self._energy_proj_coeff
         print("recomputing all momentum projection coefficients...")
 
-        self.remove_state_update(current_state_config)
-        self.add_state_update(current_state_config, current_amplitude_config)
+        self.remove_state(current_state_config)
+        self.add_state(current_state_config, current_amplitude_config)
 
         current_state_config = None
 
@@ -218,7 +211,7 @@ class Particle_in_Box_State:
             self._momentum_proj_coeff_disc = np.sqrt(np.pi/self._L)*np.array(coeff_k_psi)
 
     # Newly implemented
-    def add_state_update(self, the_states: list, the_energy_proj_coeffs: np.ndarray):
+    def add_state(self, the_states: list, the_energy_proj_coeffs: np.ndarray):
         if isinstance(the_states, int):
             the_states = [the_states]
             print("single state converted to list: ", the_states)
@@ -247,7 +240,7 @@ class Particle_in_Box_State:
         self._momentum_prob_distr_disc = np.power(np.abs(self._momentum_proj_coeff_disc), 2)
         
     # Newly implemented
-    def remove_state_update(self, the_states: list):
+    def remove_state(self, the_states: list):
         if isinstance(the_states, int):
             print("single state converted to list: ", the_states)
             the_states = [the_states]
@@ -303,13 +296,8 @@ class Particle_in_Box_State:
         self._pos_space_wavefunc = Function_of_x_and_t(lambda x,t: 0)
         self._pos_space_wavefunc_components = []
 
-        self.add_state_update(energy_states, amplitudes)
+        self.add_state(energy_states, amplitudes)
 
-    def add_state(self, energy_state_l, energy_proj_coeff):
-        self.add_state_update(energy_state_l, energy_proj_coeff)
-    
-    def remove_state(self, energy_state_l):
-        self.remove_state_update(energy_state_l)
     
     def change_energy_proj_coeff(self, the_state, the_coeff):
         self._energy_proj_coeff[self._energy_states.index(the_state)] = the_coeff
