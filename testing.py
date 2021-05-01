@@ -65,7 +65,7 @@ def gamma_to_k(gamma, l, L):
         return np.concatenate((kSolveNegLowestOdd*1j, kSolvePosLowestOdd))/L
 
 
-class Function_of_x_and_t(object):
+class Function_of_array_and_t(object):
     def __init__(self, function: Callable[[np.ndarray, float], float]):
         self._function = function
 
@@ -73,13 +73,13 @@ class Function_of_x_and_t(object):
         return self._function(x, t)
         
     def __add__(self, other):
-        return Function_of_x_and_t(lambda x,t: self._function(x,t) + other._function(x,t))
+        return Function_of_array_and_t(lambda x,t: self._function(x,t) + other._function(x,t))
 
     def __mul__(self, other):
-        if isinstance(other, Function_of_x_and_t):
-            return Function_of_x_and_t(lambda x, t: self._function(x,t)*other._function(x,t))
+        if isinstance(other, Function_of_array_and_t):
+            return Function_of_array_and_t(lambda x, t: self._function(x,t)*other._function(x,t))
         if isinstance(other, (complex, float, int)):
-            return Function_of_x_and_t(lambda x, t: other*self._function(x,t))
+            return Function_of_array_and_t(lambda x, t: other*self._function(x,t))
     
     def __rmul__(self, other):
         return self.__mul__(other)
@@ -108,6 +108,13 @@ class Particle_in_Box_State:
 
     _pos_space_wavefunc_components = None
     _pos_space_wavefunc = None
+
+    _disc_momentum_space_wavefunc_components = None
+    _cont_momentum_space_wavefunc_components = None
+
+    _disc_momentum_space_wavefunc = None
+    _cont_momentum_space_wavefunc = None
+
     _k_kappa_l_array = None
     _momentum_kn = None
     _momentum_k = None
@@ -148,13 +155,41 @@ class Particle_in_Box_State:
             else:
                 psi_to_append = lambda x, t: psi_l_Neg_odd(self._L, np.imag(the_k), x)
 
-        psi_to_append = Function_of_x_and_t(psi_to_append)
-        wiggle_factor = Function_of_x_and_t(lambda x,t: np.exp(-1j*the_energy*t))
+        psi_to_append = Function_of_array_and_t(psi_to_append)
+        wiggle_factor = Function_of_array_and_t(lambda x,t: np.exp(-1j*the_energy*t))
         final_append = the_coeff*psi_to_append*wiggle_factor
 
         self._pos_space_wavefunc_components.append(final_append)
         self._pos_space_wavefunc += final_append
 
+    def add_momentum_space_func_component(self, the_state: int, continuous: bool):
+        index = self._energy_states.index(the_state)
+        the_k = self._k_kappa_l_array[index]
+        the_energy = self._energy_state_energies[index]
+        the_coeff = self._energy_proj_coeff[index]
+
+        if the_state%2 == 0:
+            if np.imag(the_k) == 0:
+                phi_to_append = lambda k, t: momentum_Proj_Pos_even(self._L, the_k, k)
+            else:
+                phi_to_append = lambda k, t: momentum_Proj_Neg_even(self._L, np.imag(the_k),k)
+        else:
+            if np.imag(the_k) == 0:
+                phi_to_append = lambda k, t: momentum_Proj_Pos_odd(self._L, the_k, k)
+            else:
+                phi_to_append = lambda k, t: momentum_Proj_Neg_odd(self._L, np.imag(the_k), k)
+
+        phi_to_append = Function_of_array_and_t(phi_to_append)
+        wiggle_factor = Function_of_array_and_t(lambda k,t: np.exp(-1j*the_energy*t))
+        final_append = the_coeff*phi_to_append*wiggle_factor
+
+        if continuous == True:
+            self._cont_momentum_space_wavefunc_components.append(final_append)
+            self._cont_momentum_space_wavefunc += final_append
+        else:
+            self._disc_momentum_space_wavefunc_components.append(np.sqrt(np.pi/self._L)*final_append)
+            self._disc_momentum_space_wavefunc += np.sqrt(np.pi/self._L)*final_append
+        
 
     def property_change_complete_recompute(self):
         current_state_config = deepcopy(self._energy_states)
@@ -228,16 +263,18 @@ class Particle_in_Box_State:
             k_kappa_to_append = gamma_to_k(self._gamma, state, self._L)[0]
             self._k_kappa_l_array.append(k_kappa_to_append)
             self._energy_state_energies.append(np.real(k_kappa_to_append**2)/(2*self._m))
-            self.momentum_proj_coeff_matrix_add_row(state, True)
-            self.momentum_proj_coeff_matrix_add_row(state, False)
+            self.add_momentum_space_func_component(state, True)
+            self.add_momentum_space_func_component(state, False)
             self.add_pos_space_func_component(state)
         
         print("current config: ",self._energy_states)
 
+        '''
         self.update_momentum_proj_coeffs(True)
         self.update_momentum_proj_coeffs(False)
         self._momentum_prob_distr_cont = np.power(np.abs(self._momentum_proj_coeff_cont), 2)
         self._momentum_prob_distr_disc = np.power(np.abs(self._momentum_proj_coeff_disc), 2)
+        '''
         
     # Newly implemented
     def remove_state(self, the_states: list):
@@ -248,16 +285,17 @@ class Particle_in_Box_State:
         print("removing state(s): ", the_states)
         self._num_energy_states -= len(the_states)
 
-        
 
         for state in the_states:
             index = self._energy_states.index(state)
             self._energy_proj_coeff = np.delete(self._energy_proj_coeff, index)
             self._k_kappa_l_array.pop(index)
             self._energy_state_energies.pop(index)
-            self._momentum_proj_coeff_matrix_cont.pop(index)
-            self._momentum_proj_coeff_matrix_disc.pop(index)
+
             self._pos_space_wavefunc_components.pop(index)
+            self._cont_momentum_space_wavefunc_components.pop(index)
+            self._disc_momentum_space_wavefunc_components.pop(index)
+
             # This absolutely needs to be the last action of this iteration!
             self._energy_states.remove(state)
 
@@ -265,14 +303,21 @@ class Particle_in_Box_State:
         
 
         self.normalize()
+
+        """
         self.update_momentum_proj_coeffs(True)
         self.update_momentum_proj_coeffs(False)
         self._momentum_prob_distr_cont = np.power(np.abs(self._momentum_proj_coeff_cont), 2)
         self._momentum_prob_distr_disc = np.power(np.abs(self._momentum_proj_coeff_disc), 2)
+        """
 
-        self._pos_space_wavefunc = Function_of_x_and_t(lambda x,t: 0)
-        for func in self._pos_space_wavefunc_components:
-            self._pos_space_wavefunc += func
+        self._pos_space_wavefunc = Function_of_array_and_t(lambda x,t: 0)
+        self._cont_momentum_space_wavefunc = Function_of_array_and_t(lambda k,t: 0)
+        self._disc_momentum_space_wavefunc = Function_of_array_and_t(lambda k,t: 0)
+        for function_index in range(self._num_energy_states):
+            self._pos_space_wavefunc += self._pos_space_wavefunc_components[function_index]
+            self._cont_momentum_space_wavefunc += self._cont_momentum_space_wavefunc_components[function_index]
+            self._disc_momentum_space_wavefunc += self._disc_momentum_space_wavefunc_components[function_index]
 
     def normalize(self):
         if self._num_energy_states == 0:
@@ -293,8 +338,14 @@ class Particle_in_Box_State:
         self._momentum_proj_coeff_matrix_cont = []
         self._momentum_proj_coeff_matrix_disc = []
         self._energy_proj_coeff = np.empty(0)
-        self._pos_space_wavefunc = Function_of_x_and_t(lambda x,t: 0)
+
+        self._pos_space_wavefunc = Function_of_array_and_t(lambda x,t: 0)
         self._pos_space_wavefunc_components = []
+
+        self._cont_momentum_space_wavefunc = Function_of_array_and_t(lambda k,t: 0)
+        self._disc_momentum_space_wavefunc = Function_of_array_and_t(lambda k,t: 0)
+        self._cont_momentum_space_wavefunc_components = []
+        self._disc_momentum_space_wavefunc_components = []
 
         self.add_state(energy_states, amplitudes)
 
@@ -302,8 +353,11 @@ class Particle_in_Box_State:
     def change_energy_proj_coeff(self, the_state, the_coeff):
         self._energy_proj_coeff[self._energy_states.index(the_state)] = the_coeff
         self.normalize()
+
+        """
         self.update_momentum_proj_coeffs(True)
         self.update_momentum_proj_coeffs(False)
+        """
 
     @property
     def L(self):
