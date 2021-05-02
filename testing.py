@@ -208,6 +208,32 @@ class K_Space_Proj_Neg_Odd(Function_of_array):
         Function_of_array.__init__(self, lambda k: (2)*np.sqrt(L/np.pi)/np.sqrt(1+np.sinh(kappal*L)/(kappal*L))*(k*L*np.cos(k*L/2)*np.sinh(kappal*L/2) + kappal*L*np.sin(k*L/2)*np.cosh(kappal*L/2))/((kappal*L)**2+(k*L)**2))
 
 
+class Projection_Handler:
+    def __init__(self, L, gamma, m, energy_states, energy_proj_coeffs) -> None:
+        pass
+
+class New_Momentum_Space_Projection:
+    def __init__(self, new_k_space_wavefunction, new_k_space_single_energy_proj) -> None:
+        pass
+
+class Momentum_Space_Projection:
+    def __init__(self, cont_k_space_wavefunction, cont_k_space_single_energy_proj) -> None:
+        pass
+
+class Position_Space_Projection:
+    def __init__(self, x_space_wavefunction, x_space_single_energy_proj) -> None:
+        pass
+
+class Energy_Space_Projection:
+    def __init__(self, energies, energy_proj_coeffs, wiggle_factors) -> None:
+        pass
+
+
+class Particle_in_Box_State_v2:
+    def __init__(self, L, gamma, m, energy_states, energy_proj_coeffs) -> None:
+        pass
+
+
 class Particle_in_Box_State:
     _L = np.pi
     _gamma = 0
