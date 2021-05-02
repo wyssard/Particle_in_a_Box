@@ -1,7 +1,9 @@
 from typing import Callable
 import numpy as np
 from copy import deepcopy
+from numpy.core.einsumfunc import _flop_count
 from scipy.optimize import fsolve
+from abc import ABC, abstractmethod, abstractproperty
 
 posRelEven = lambda g, k: g-np.arctan(k*np.tan(k/2))
 posRelOdd = lambda g, k: g+np.arctan(k/(np.tan(k/2)))
@@ -64,10 +66,71 @@ def gamma_to_k(gamma, l, L):
 
         return np.concatenate((kSolveNegLowestOdd*1j, kSolvePosLowestOdd))/L
 
-
-class Function_of_array_and_t:
-    def __init__(self, function: Callable[[np.ndarray, float], float]):
+class Function_Base(ABC):
+    def __init__(self, function: Callable):
         self._function = function
+
+    @abstractmethod
+    def __call__(self, args):
+        pass
+
+    @abstractmethod
+    def __add__(self, other):
+        pass
+    
+    @abstractmethod
+    def __mul__(self, other):
+        pass
+
+    @abstractmethod
+    def __rmul__(self, other):
+        pass
+
+class Function_of_t(Function_Base):
+    def __init__(self, function: Callable[[float], float]):
+        Function_Base.__init__(self, function)
+
+    def __call__(self, t: float):
+        return self._function(t)
+    
+    def __add__(self, other: Function_Base):
+        return Function_of_t(lambda t: self._function(t) + other._function(t))
+        
+    def __mul__(self, other):
+        if isinstance(other, Function_of_t):
+            return Function_of_t(lambda t: self._function(t)*other._function(t))
+        elif isinstance(other, Function_of_array):
+            return Function_of_array_and_t(lambda n,t: self._function(t)*other._function(n))
+        elif isinstance(other, (int, float, complex)):
+            return Function_of_t(lambda t: other*self._function(t))
+
+    def __rmul__(self, other):
+        return self.__mul__(other)
+
+class Function_of_array(Function_Base):
+    def __init__(self, function: Callable[[np.ndarray], np.ndarray]):
+        Function_Base.__init__(self, function)
+
+    def __call__(self, n: np.ndarray):
+        return self._function(n)
+
+    def __add__(self, other: Function_Base):
+        return Function_of_array(lambda n: self._function(n) + other._function(n))
+
+    def __mul__(self, other):
+        if isinstance(other, Function_of_t):
+            return Function_of_array_and_t(lambda n,t: self._function(n)*other._function(t))
+        elif isinstance(other, Function_of_array):
+            return Function_of_array(lambda n: self._function(n)*other._function(n))
+        elif isinstance(other, (int, float, complex)):
+            return Function_of_array(lambda n: other*self._function(n))
+
+    def __rmul__(self, other):
+        return self.__mul__(other)
+
+class Function_of_array_and_t(Function_Base):
+    def __init__(self, function: Callable[[np.ndarray, float], float]):
+        Function_Base.__init__(self, function)
 
     def __call__(self, x: np.ndarray, t: float):
         return self._function(x, t)
@@ -87,6 +150,12 @@ class Function_of_array_and_t:
         return self.__mul__(other)
 
 
+class New_Wiggle_Factor(Function_of_t):
+    def __init__(self, energy: float):
+        self._energy = energy
+        Function_of_t.__init__(self, lambda t: np.exp(-1j*self._energy*t))
+    
+
 class Wiggle_Factor:
     def __init__(self, energy: float) -> None:
         self._energy = energy
@@ -104,11 +173,51 @@ class Wiggle_Factor:
         return self.__mul__(other)
 
 
+class X_Space_Proj_Pos_Odd(Function_of_array):
+    def __init__(self, L, kl):
+        self._L = L
+        self._kl = kl
+        Function_of_array.__init__(self, lambda x: np.sqrt(2/L)*np.power(1+np.sin(kl*L)/(kl*L), -1/2)*np.cos(kl*x))
+    
+class X_Space_Proj_Pos_Even(Function_of_array):
+    def __init__(self, L, kl):
+        self._L = L
+        self._kl = kl
+        Function_of_array.__init__(self, lambda x: np.sqrt(2/L)*np.power(1-np.sin(kl*L)/(kl*L), -1/2)*np.sin(kl*x))
+
+class X_Space_Proj_Neg_Odd(Function_of_array):
+    def __init__(self, L, kappal):
+        self._L = L
+        self._kappal = kappal
+        Function_of_array.__init__(self, lambda x: np.sqrt(2/L)*np.power(1+np.sinh(kappal*L)/(kappal*L), -1/2)*np.cosh(kappal*x))
+        
+class X_Space_Proj_Neg_Even(Function_of_array):
+    def __init__(self, L, kappal):
+        self._L = L
+        self._kappal = kappal
+        Function_of_array.__init__(self, lambda x: np.sqrt(2/L)*np.power(-1+np.sinh(kappal*L)/(kappal*L), -1/2)*np.sinh(kappal*x))
 
 psi_l_Pos_odd = lambda L, kl, x: np.sqrt(2/L)*np.power(1+np.sin(kl*L)/(kl*L), -1/2)*np.cos(kl*x)
 psi_l_Pos_even = lambda L, kl, x: np.sqrt(2/L)*np.power(1-np.sin(kl*L)/(kl*L), -1/2)*np.sin(kl*x)
 psi_l_Neg_odd = lambda L, kappal, x: np.sqrt(2/L)*np.power(1+np.sinh(kappal*L)/(kappal*L), -1/2)*np.cosh(kappal*x)
 psi_l_Neg_even = lambda L, kappal, x: np.sqrt(2/L)*np.power(-1+np.sinh(kappal*L)/(kappal*L), -1/2)*np.sinh(kappal*x)
+
+class K_Space_Proj_Pos_Even(Function_of_array):
+    def __init__(self, L, kl):
+        Function_of_array.__init__(self, lambda k: np.sqrt(L/np.pi)/np.sqrt(1-np.sin(kl*L)/(kl*L))*(np.sin((kl+k)*L/2)/(kl*L+k*L) - np.sin((kl-k)*L/2)/(kl*L-k*L)))
+
+class K_Space_Proj_Pos_Odd(Function_of_array):
+    def __init__(self, L, kl):
+        Function_of_array.__init__(self, lambda k: np.sqrt(L/np.pi)/np.sqrt(1+np.sin(kl*L)/(kl*L))*(np.sin((kl+k)*L/2)/(kl*L+k*L) + np.sin((kl-k)*L/2)/(kl*L-k*L)))
+
+class K_Space_Proj_Neg_Even(Function_of_array):
+    def __init__(self, L, kappal):
+        Function_of_array.__init__(self, lambda k: (2j)*np.sqrt(L/np.pi)/np.sqrt(-1+np.sinh(kappal*L)/(kappal*L))*(k*L*np.cos(k*L/2)*np.sinh(kappal*L/2) - kappal*L*np.sin(k*L/2)*np.cosh(kappal*L/2))/((kappal*L)**2+(k*L)**2))
+
+class K_Space_Proj_Neg_Odd(Function_of_array):
+    def __init__(self, L, kappal):
+        Function_of_array.__init__(self, lambda k: (2)*np.sqrt(L/np.pi)/np.sqrt(1+np.sinh(kappal*L)/(kappal*L))*(k*L*np.cos(k*L/2)*np.sinh(kappal*L/2) + kappal*L*np.sin(k*L/2)*np.cosh(kappal*L/2))/((kappal*L)**2+(k*L)**2))
+
 
 momentum_Proj_Pos_even = lambda L, kl, k: np.sqrt(L/np.pi)/np.sqrt(1-np.sin(kl*L)/(kl*L))*(np.sin((kl+k)*L/2)/(kl*L+k*L) - np.sin((kl-k)*L/2)/(kl*L-k*L))
 momentum_Proj_Pos_odd = lambda L, kl, k: np.sqrt(L/np.pi)/np.sqrt(1+np.sin(kl*L)/(kl*L))*(np.sin((kl+k)*L/2)/(kl*L+k*L) + np.sin((kl-k)*L/2)/(kl*L-k*L))
@@ -124,6 +233,7 @@ class Particle_in_Box_State:
     _energy_proj_coeff = None
     _energy_state_energies = None
     _energy_wiggle_factors = None
+    _new_wiggle_factors = None
 
     _pos_space_wavefunc_components = None
     _pos_space_wavefunc = None
@@ -160,16 +270,20 @@ class Particle_in_Box_State:
         
         if the_state%2 == 0:
             if np.imag(the_k)==0:
-                psi_to_append = lambda x, t: psi_l_Pos_even(self._L, the_k, x)
+                psi_to_append = X_Space_Proj_Pos_Even(self._L, the_k)
+                #psi_to_append = lambda x, t: psi_l_Pos_even(self._L, the_k, x)
             else:
-                psi_to_append = lambda x, t: psi_l_Neg_even(self._L, np.imag(the_k), x)
+                psi_to_append = X_Space_Proj_Neg_Even(self._L, np.imag(the_k))
+                #psi_to_append = lambda x, t: psi_l_Neg_even(self._L, np.imag(the_k), x)
         else:
             if np.imag(the_k)==0:
-                psi_to_append = lambda x, t: psi_l_Pos_odd(self._L, the_k, x)
+                psi_to_append = X_Space_Proj_Pos_Odd(self._L, the_k)
+                #psi_to_append = lambda x, t: psi_l_Pos_odd(self._L, the_k, x)
             else:
-                psi_to_append = lambda x, t: psi_l_Neg_odd(self._L, np.imag(the_k), x)
+                psi_to_append = X_Space_Proj_Neg_Odd(self._L, np.imag(the_k))
+                #psi_to_append = lambda x, t: psi_l_Neg_odd(self._L, np.imag(the_k), x)
 
-        psi_to_append = Function_of_array_and_t(psi_to_append)
+        #psi_to_append = Function_of_array_and_t(psi_to_append)
 
         self._pos_space_wavefunc_components.append(psi_to_append)
 
@@ -179,16 +293,20 @@ class Particle_in_Box_State:
 
         if the_state%2 == 0:
             if np.imag(the_k) == 0:
-                phi_to_append = lambda k, t: momentum_Proj_Pos_even(self._L, the_k, k)
+                phi_to_append = K_Space_Proj_Pos_Even(self._L, the_k)
+                #phi_to_append = lambda k, t: momentum_Proj_Pos_even(self._L, the_k, k)
             else:
-                phi_to_append = lambda k, t: momentum_Proj_Neg_even(self._L, np.imag(the_k),k)
+                phi_to_append = K_Space_Proj_Neg_Even(self._L, np.imag(the_k))
+                #phi_to_append = lambda k, t: momentum_Proj_Neg_even(self._L, np.imag(the_k),k)
         else:
             if np.imag(the_k) == 0:
-                phi_to_append = lambda k, t: momentum_Proj_Pos_odd(self._L, the_k, k)
+                phi_to_append = K_Space_Proj_Pos_Odd(self._L, the_k)
+                #phi_to_append = lambda k, t: momentum_Proj_Pos_odd(self._L, the_k, k)
             else:
-                phi_to_append = lambda k, t: momentum_Proj_Neg_odd(self._L, np.imag(the_k), k)
+                phi_to_append = K_Space_Proj_Neg_Odd(self._L, np.imag(the_k))
+                #phi_to_append = lambda k, t: momentum_Proj_Neg_odd(self._L, np.imag(the_k), k)
 
-        phi_to_append = Function_of_array_and_t(phi_to_append)
+        #phi_to_append = Function_of_array_and_t(phi_to_append)
 
         if continuous == True:
             self._cont_momentum_space_wavefunc_components.append(phi_to_append)
@@ -226,6 +344,8 @@ class Particle_in_Box_State:
             energy_to_append = np.real(k_kappa_to_append**2)/(2*self._m)
             self._energy_state_energies.append(energy_to_append)
 
+            new_wiggle_factor = New_Wiggle_Factor(energy_to_append)
+            self._new_wiggle_factors.append(new_wiggle_factor)
             
             wiggle_factor = Wiggle_Factor(energy_to_append)
             self._energy_wiggle_factors.append(wiggle_factor)
@@ -258,6 +378,7 @@ class Particle_in_Box_State:
             self._k_kappa_l_array.pop(index)
             self._energy_state_energies.pop(index)
             self._energy_wiggle_factors.pop(index)
+            self._new_wiggle_factors.pop(index)
             self._pos_space_wavefunc_components.pop(index)
             self._cont_momentum_space_wavefunc_components.pop(index)
             self._disc_momentum_space_wavefunc_components.pop(index)
@@ -289,9 +410,11 @@ class Particle_in_Box_State:
         self._k_kappa_l_array = []
         self._energy_proj_coeff = np.empty(0)
         self._energy_wiggle_factors = []
+        self._new_wiggle_factors = []
 
         self._pos_space_wavefunc = Function_of_array_and_t(lambda x,t: 0)
         self._pos_space_wavefunc_components = []
+
 
         self._cont_momentum_space_wavefunc = Function_of_array_and_t(lambda k,t: 0)
         self._disc_momentum_space_wavefunc = Function_of_array_and_t(lambda k,t: 0)
@@ -303,17 +426,17 @@ class Particle_in_Box_State:
     def pos_space_func_recombine(self):
         self._pos_space_wavefunc = Function_of_array_and_t(lambda x,t:0)
         for state_index in range(self._num_energy_states):
-            self._pos_space_wavefunc += self._energy_proj_coeff[state_index]*self._pos_space_wavefunc_components[state_index]*self._energy_wiggle_factors[state_index]
+            self._pos_space_wavefunc += self._energy_proj_coeff[state_index]*self._pos_space_wavefunc_components[state_index]*self._new_wiggle_factors[state_index]
             
     def momentum_space_func_recombine(self, continuous: bool):
         if continuous==True:
             self._cont_momentum_space_wavefunc = Function_of_array_and_t(lambda x,t:0)
             for state_index in range(self._num_energy_states):
-                self._cont_momentum_space_wavefunc += self._energy_proj_coeff[state_index]*self._cont_momentum_space_wavefunc_components[state_index]*self._energy_wiggle_factors[state_index]
+                self._cont_momentum_space_wavefunc += self._energy_proj_coeff[state_index]*self._cont_momentum_space_wavefunc_components[state_index]*self._new_wiggle_factors[state_index]
         else:
             self._disc_momentum_space_wavefunc = Function_of_array_and_t(lambda x,t:0)
             for state_index in range(self._num_energy_states):
-                self._disc_momentum_space_wavefunc += self._energy_proj_coeff[state_index]*self._disc_momentum_space_wavefunc_components[state_index]*self._energy_wiggle_factors[state_index]
+                self._disc_momentum_space_wavefunc += self._energy_proj_coeff[state_index]*self._disc_momentum_space_wavefunc_components[state_index]*self._new_wiggle_factors[state_index]
     
     def change_energy_proj_coeff(self, the_state, the_coeff):
         self._energy_proj_coeff[self._energy_states.index(the_state)] = the_coeff
