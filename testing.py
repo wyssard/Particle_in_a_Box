@@ -150,13 +150,13 @@ class Function_of_array_and_t(Function_Base):
         return self.__mul__(other)
 
 
-class New_Wiggle_Factor(Function_of_t):
+class Wiggle_Factor(Function_of_t):
     def __init__(self, energy: float):
         self._energy = energy
         Function_of_t.__init__(self, lambda t: np.exp(-1j*self._energy*t))
     
 
-class Wiggle_Factor:
+class Old_Wiggle_Factor:
     def __init__(self, energy: float) -> None:
         self._energy = energy
 
@@ -232,8 +232,7 @@ class Particle_in_Box_State:
     _energy_states = None
     _energy_proj_coeff = None
     _energy_state_energies = None
-    _energy_wiggle_factors = None
-    _new_wiggle_factors = None
+    _wiggle_factors = None
 
     _pos_space_wavefunc_components = None
     _pos_space_wavefunc = None
@@ -343,12 +342,9 @@ class Particle_in_Box_State:
 
             energy_to_append = np.real(k_kappa_to_append**2)/(2*self._m)
             self._energy_state_energies.append(energy_to_append)
-
-            new_wiggle_factor = New_Wiggle_Factor(energy_to_append)
-            self._new_wiggle_factors.append(new_wiggle_factor)
             
             wiggle_factor = Wiggle_Factor(energy_to_append)
-            self._energy_wiggle_factors.append(wiggle_factor)
+            self._wiggle_factors.append(wiggle_factor)
 
             
             self.add_momentum_space_func_component(state, True)
@@ -377,8 +373,7 @@ class Particle_in_Box_State:
             self._energy_proj_coeff = np.delete(self._energy_proj_coeff, index)
             self._k_kappa_l_array.pop(index)
             self._energy_state_energies.pop(index)
-            self._energy_wiggle_factors.pop(index)
-            self._new_wiggle_factors.pop(index)
+            self._wiggle_factors.pop(index)
             self._pos_space_wavefunc_components.pop(index)
             self._cont_momentum_space_wavefunc_components.pop(index)
             self._disc_momentum_space_wavefunc_components.pop(index)
@@ -409,8 +404,7 @@ class Particle_in_Box_State:
         self._energy_state_energies = []
         self._k_kappa_l_array = []
         self._energy_proj_coeff = np.empty(0)
-        self._energy_wiggle_factors = []
-        self._new_wiggle_factors = []
+        self._wiggle_factors = []
 
         self._pos_space_wavefunc = Function_of_array_and_t(lambda x,t: 0)
         self._pos_space_wavefunc_components = []
@@ -426,17 +420,17 @@ class Particle_in_Box_State:
     def pos_space_func_recombine(self):
         self._pos_space_wavefunc = Function_of_array_and_t(lambda x,t:0)
         for state_index in range(self._num_energy_states):
-            self._pos_space_wavefunc += self._energy_proj_coeff[state_index]*self._pos_space_wavefunc_components[state_index]*self._new_wiggle_factors[state_index]
+            self._pos_space_wavefunc += self._energy_proj_coeff[state_index]*self._pos_space_wavefunc_components[state_index]*self._wiggle_factors[state_index]
             
     def momentum_space_func_recombine(self, continuous: bool):
         if continuous==True:
             self._cont_momentum_space_wavefunc = Function_of_array_and_t(lambda x,t:0)
             for state_index in range(self._num_energy_states):
-                self._cont_momentum_space_wavefunc += self._energy_proj_coeff[state_index]*self._cont_momentum_space_wavefunc_components[state_index]*self._new_wiggle_factors[state_index]
+                self._cont_momentum_space_wavefunc += self._energy_proj_coeff[state_index]*self._cont_momentum_space_wavefunc_components[state_index]*self._wiggle_factors[state_index]
         else:
             self._disc_momentum_space_wavefunc = Function_of_array_and_t(lambda x,t:0)
             for state_index in range(self._num_energy_states):
-                self._disc_momentum_space_wavefunc += self._energy_proj_coeff[state_index]*self._disc_momentum_space_wavefunc_components[state_index]*self._new_wiggle_factors[state_index]
+                self._disc_momentum_space_wavefunc += self._energy_proj_coeff[state_index]*self._disc_momentum_space_wavefunc_components[state_index]*self._wiggle_factors[state_index]
     
     def change_energy_proj_coeff(self, the_state, the_coeff):
         self._energy_proj_coeff[self._energy_states.index(the_state)] = the_coeff
