@@ -211,10 +211,13 @@ class K_Space_Proj_Neg_Odd(Function_of_array):
 class Particle_in_Box_State:
     _L = np.pi
     _gamma = 0
+    _m = 1
 
     _energy_states = None
     _energy_proj_coeff = None
     _energy_state_energies = None
+    _k_kappa_l_array = None
+    _num_energy_states = 0
     _wiggle_factors = None
 
     _x_space_wavefunc_components = None
@@ -225,26 +228,6 @@ class Particle_in_Box_State:
 
     _disc_k_space_wavefunc = None
     _cont_k_space_wavefunc = None
-
-    _k_kappa_l_array = None
-    _momentum_kn = None
-    _momentum_k = None
-
-    _num_energy_states = 0
-
-    _m = 1
-
-    @property
-    def x_space_wavefunc(self):
-        return self._x_space_wavefunc
-
-    @property
-    def disc_k_space_wavefunc(self):
-        return self._disc_k_space_wavefunc
-    
-    @property
-    def cont_k_space_wavefunc(self):
-        return self._cont_k_space_wavefunc
 
     def add_x_space_proj_component(self, the_state: int):
         index = self._energy_states.index(the_state)
@@ -425,6 +408,18 @@ class Particle_in_Box_State:
     @gamma.setter
     def gamma(self, new_gamma):
         self._gamma = new_gamma
+
+    @property
+    def x_space_wavefunc(self):
+        return self._x_space_wavefunc
+
+    @property
+    def disc_k_space_wavefunc(self):
+        return self._disc_k_space_wavefunc
+    
+    @property
+    def cont_k_space_wavefunc(self):
+        return self._cont_k_space_wavefunc
 
     
 class State_Plot:
