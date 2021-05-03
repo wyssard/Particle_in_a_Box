@@ -440,7 +440,6 @@ class Projection_Handler:
         self.k_space_func_recombine(False)
 
 
-
 class Particle_in_Box_State_v2:
     def __init__(self, energy_space_projection: Energy_Space_Projection) -> None:
         self._esp = energy_space_projection
