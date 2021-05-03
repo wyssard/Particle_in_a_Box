@@ -208,25 +208,210 @@ class K_Space_Proj_Neg_Odd(Function_of_array):
         Function_of_array.__init__(self, lambda k: (2)*np.sqrt(L/np.pi)/np.sqrt(1+np.sinh(kappal*L)/(kappal*L))*(k*L*np.cos(k*L/2)*np.sinh(kappal*L/2) + kappal*L*np.sin(k*L/2)*np.cosh(kappal*L/2))/((kappal*L)**2+(k*L)**2))
 
 
-class Projection_Handler:
+class Energy_Space_Projection:
     def __init__(self, L, gamma, m, energy_states, energy_proj_coeffs) -> None:
-        pass
+        self._gamma = gamma
+        self._L = L
+        self._m = m
+        self._energy_states = []
+        self._energies = []
+        self._wiggle_factors = []
+        self._energy_proj_coeffs = np.array([])
+        self._num_energy_states = 0
+        self._k_kappa_l = []
+        self.add_states(energy_states, energy_proj_coeffs)
+
+
+    def normalize(self) -> None:
+        if self._num_energy_states == 0:
+            return 0
+        else:
+            norm = np.sum(np.power(np.abs(self._energy_proj_coeffs), 2))
+            self._energy_proj_coeffs = self._energy_proj_coeffs*(1/np.sqrt(norm))
+    
+
+    def add_states(self, the_states: list, their_coeffs: np.ndarray) -> None:
+        if isinstance(the_states, int):
+            the_states = [the_states]
+            print("single state converted to list: ", the_states)
+        
+        self._num_energy_states += len(the_states)
+        self._energy_proj_coeffs = np.append(self._energy_proj_coeffs, their_coeffs)
+        self.normalize()
+
+        for state in the_states:
+            k_kappa_to_append = gamma_to_k(self._gamma, state, self._L)[0]
+            energy_to_append = (k_kappa_to_append**2)/(2*self._m)
+
+            self._k_kappa_l.append(k_kappa_to_append)
+            self._energies.append(energy_to_append)
+            self._wiggle_factors.append(Wiggle_Factor(energy_to_append))
+
+
+    def remove_states(self, the_states: list) -> None:
+        if isinstance(the_states, int):
+            the_states = [the_states]
+            print("single state converted to list: ", the_states)
+        
+        self._num_energy_states -= len(the_states)
+        
+        for state in the_states:
+            index = self._energy_states.index(state)
+            self._energy_proj_coeffs = np.delete(self._energy_proj_coeffs, index)
+            self._k_kappa_l.pop(index)
+            self._energies.pop(index)
+            self._wiggle_factors.pop(index)
+            self._energy_states.remove(state)
+
+        self.normalize()
 
 class New_Momentum_Space_Projection:
     def __init__(self, new_k_space_wavefunction, new_k_space_single_energy_proj) -> None:
-        pass
+        self._new_k_space_wavefunction = new_k_space_wavefunction
+        self._new_k_space_single_energy_proj = new_k_space_single_energy_proj
 
 class Momentum_Space_Projection:
     def __init__(self, cont_k_space_wavefunction, cont_k_space_single_energy_proj) -> None:
-        pass
+        self._cont_k_space_wavefunction = cont_k_space_wavefunction
+        self._cont_k_space_single_energy_proj = cont_k_space_single_energy_proj
 
 class Position_Space_Projection:
     def __init__(self, x_space_wavefunction, x_space_single_energy_proj) -> None:
-        pass
+        self._x_space_wavefunction = x_space_wavefunction
+        self._x_space_single_energy_proj = x_space_single_energy_proj
 
-class Energy_Space_Projection:
-    def __init__(self, energies, energy_proj_coeffs, wiggle_factors) -> None:
-        pass
+class Projection_Handler:
+    def __init__(self, energy_space_projection: Energy_Space_Projection) -> None:
+        self._esp = energy_space_projection
+        self._xsp = Position_Space_Projection(None, [])
+        self._new_ksp = New_Momentum_Space_Projection(None, [])
+        self._ksp = Momentum_Space_Projection(None, [])
+
+    def add_x_space_proj_component(self, the_state: int):
+        index = self._esp._energy_states.index(the_state)
+        the_k = self._esp._k_kappa_l[index]
+        
+        if the_state%2 == 0:
+            if np.imag(the_k)==0:
+                psi_to_append = X_Space_Proj_Pos_Even(self._esp._L, the_k)
+            else:
+                psi_to_append = X_Space_Proj_Neg_Even(self._esp._L, np.imag(the_k))
+        else:
+            if np.imag(the_k)==0:
+                psi_to_append = X_Space_Proj_Pos_Odd(self._esp._L, the_k)
+            else:
+                psi_to_append = X_Space_Proj_Neg_Odd(self._esp._L, np.imag(the_k))
+
+        self._xsp._x_space_single_energy_proj.append(psi_to_append)
+
+    def add_k_space_proj_component(self, the_state: int, continuous: bool):
+        index = self._esp._energy_states.index(the_state)
+        the_k = self._esp._k_kappa_l[index]
+
+        if the_state%2 == 0:
+            if np.imag(the_k) == 0:
+                phi_to_append = K_Space_Proj_Pos_Even(self._esp._L, the_k)
+            else:
+                phi_to_append = K_Space_Proj_Neg_Even(self._esp._L, np.imag(the_k))
+        else:
+            if np.imag(the_k) == 0:
+                phi_to_append = K_Space_Proj_Pos_Odd(self._esp._L, the_k)
+            else:
+                phi_to_append = K_Space_Proj_Neg_Odd(self._esp._L, np.imag(the_k))
+
+        if continuous == True:
+            self._ksp._cont_k_space_single_energy_proj.append(phi_to_append)
+        else:
+            self._new_ksp._new_k_space_single_energy_proj.append(np.sqrt(np.pi/self._L)*phi_to_append)
+    
+    def x_space_func_recombine(self):
+        self._xsp._x_space_wavefunction = Function_of_array_and_t(lambda x,t:0)
+        for state_index in range(self._esp._num_energy_states):
+            self._xsp._x_space_wavefunction += self._esp._energy_proj_coeffs[state_index]*self._xsp._x_space_single_energy_proj[state_index]*self._esp._wiggle_factors[state_index]
+            
+    def k_space_func_recombine(self, continuous: bool):
+        if continuous==True:
+            self._ksp._cont_k_space_wavefunction = Function_of_array_and_t(lambda x,t:0)
+            for state_index in range(self._esp._num_energy_states):
+                self._ksp._cont_k_space_wavefunction += self._esp._energy_proj_coeffs[state_index]*self._ksp._cont_k_space_single_energy_proj[state_index]*self._esp._wiggle_factors[state_index]
+        else:
+            self._new_ksp._new_k_space_wavefunction = Function_of_array_and_t(lambda x,t:0)
+            for state_index in range(self._esp._num_energy_states):
+                self._new_ksp._new_k_space_wavefunction += self._esp._energy_proj_coeffs[state_index]*self._new_ksp._new_k_space_single_energy_proj[state_index]*self._esp._wiggle_factors[state_index]
+    
+    def generate_x_and_k_projections(self):
+        for state in self._esp._energy_states:
+            self.add_x_space_proj_component(state)
+            self.add_k_space_proj_component(state, True)
+            self.add_k_space_proj_component(state, False)
+        
+        self.x_space_func_recombine()
+        self.k_space_func_recombine(True)
+        self.k_space_func_recombine(False)
+
+    def add_energy_states(self, the_states, their_coeffs):
+        if isinstance(the_states, int):
+            the_states = [the_states]
+            print("single state converted to list: ", the_states)
+            the_energy_proj_coeffs = np.array([their_coeffs])
+
+        print("adding state(s): ", the_states)
+
+        self._esp._energy_proj_coeffs = np.append(self._esp._energy_proj_coeffs, the_energy_proj_coeffs)
+        self._esp._num_energy_states += len(the_states)
+        self._esp.normalize()
+
+        for state in the_states:
+            
+            self._esp._energy_states.append(state)
+            k_kappa_to_append = gamma_to_k(self._esp._gamma, state, self._esp._L)[0]
+            self._esp._k_kappa_l.append(k_kappa_to_append)
+
+            energy_to_append = np.real(k_kappa_to_append**2)/(2*self._esp._m)
+            self._esp._energies.append(energy_to_append)
+            
+            self._esp._wiggle_factors.append(Wiggle_Factor(energy_to_append))
+
+            self.add_k_space_proj_component(state, True)
+            self.add_k_space_proj_component(state, False)
+            self.add_x_space_proj_component(state)
+            
+
+        print("current config: ",self._esp._energy_states)
+        
+        self.x_space_func_recombine()
+        self.k_space_func_recombine(True)
+        self.k_space_func_recombine(False)
+
+    def remove_energy_states(self, the_states):
+        if isinstance(the_states, int):
+            print("single state converted to list: ", the_states)
+            the_states = [the_states]
+        
+        print("removing state(s): ", the_states)
+        self._esp._num_energy_states -= len(the_states)
+
+
+        for state in the_states:
+            index = self._esp._energy_states.index(state)
+            self._esp._energy_proj_coeffs = np.delete(self._esp._energy_proj_coeffs, index)
+            self._esp._k_kappa_l.pop(index)
+            self._esp._energies.pop(index)
+            self._esp._wiggle_factors.pop(index)
+            self._x_space_wavefunc_components.pop(index)
+            self._cont_k_space_wavefunc_components.pop(index)
+            self._disc_k_space_wavefunc_components.pop(index)
+
+            # This absolutely needs to be the last action of this iteration!
+            self._esp._energy_states.remove(state)
+
+        print("current config: ", self._energy_states)
+        
+        self._esp.normalize()
+        self.x_space_func_recombine()
+        self.k_space_func_recombine(True)
+        self.k_space_func_recombine(False)
+
 
 
 class Particle_in_Box_State_v2:
