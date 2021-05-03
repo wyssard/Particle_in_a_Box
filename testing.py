@@ -2,7 +2,7 @@ from typing import Callable
 import numpy as np
 from copy import deepcopy
 from scipy.optimize import fsolve
-from abc import ABC, abstractmethod, abstractproperty
+from abc import ABC, abstractmethod
 
 posRelEven = lambda g, k: g-np.arctan(k*np.tan(k/2))
 posRelOdd = lambda g, k: g+np.arctan(k/(np.tan(k/2)))
@@ -304,11 +304,11 @@ class Position_Space_Projection:
 
 
 class Projection_Handler:
-    def __init__(self, energy_space_projection: Energy_Space_Projection) -> None:
+    def __init__(self, energy_space_projection: Energy_Space_Projection, x_space_proj: Position_Space_Projection, k_space_proj: Momentum_Space_Projection, new_k_space_proj: New_Momentum_Space_Projection) -> None:
         self._esp = energy_space_projection
-        self._xsp = Position_Space_Projection(None_Function(), [])
-        self._new_ksp = New_Momentum_Space_Projection(None_Function(), [])
-        self._ksp = Momentum_Space_Projection(None_Function(), [])
+        self._xsp = x_space_proj
+        self._new_ksp = new_k_space_proj
+        self._ksp = k_space_proj
         print("num energy states: ", self._esp._num_energy_states)
         self.generate_x_and_k_projections()
 
@@ -444,15 +444,16 @@ class Projection_Handler:
 class Particle_in_Box_State_v2:
     def __init__(self, energy_space_projection: Energy_Space_Projection) -> None:
         self._esp = energy_space_projection
-        print("energy states: ", self._esp._energy_states)
-        self._proj_handler = Projection_Handler(energy_space_projection)
+        self._xsp = Position_Space_Projection(None_Function(), [])
+        self._ksp = Momentum_Space_Projection(None_Function(), [])
+        self._new_ksp = New_Momentum_Space_Projection(None_Function(), [])
+        self._proj_handler = Projection_Handler(energy_space_projection, self._xsp, self._ksp, self._new_ksp)
 
     @staticmethod
     def init_from_scratch(gamma: float, L: float, m: float, energy_states: list, energy_proj_coeffs: np.ndarray):
         esp = Energy_Space_Projection(L, gamma, m, energy_states, energy_proj_coeffs)
         return Particle_in_Box_State_v2(esp)
     
-
     def add_energy_states(self, the_states: list, their_coeffs: list) -> None:
         self._proj_handler.add_energy_states(the_states, their_coeffs)
     
@@ -466,25 +467,17 @@ class Particle_in_Box_State_v2:
 
     @property
     def x_space_wavefunction(self) -> Position_Space_Projection:
-        return self._proj_handler._xsp._x_space_wavefunction
+        return self._xsp._x_space_wavefunction
 
     @property
     def k_space_wavefunction(self) -> Momentum_Space_Projection:
-        return self._proj_handler._ksp._cont_k_space_wavefunction
+        return self._ksp._cont_k_space_wavefunction
 
     @property
     def new_k_space_wavefunction(self) -> New_Momentum_Space_Projection:
-        return self._proj_handler._new_ksp._new_k_space_wavefunction
+        return self._new_ksp._new_k_space_wavefunction
 
     
-
-
-
-    
-
-
-
-
 class Particle_in_Box_State:
     _L = np.pi
     _gamma = 0
