@@ -3,6 +3,7 @@ import numpy as np
 from copy import deepcopy
 from scipy.optimize import fsolve
 from abc import ABC, abstractmethod
+from matplotlib import pyplot as plt
 
 posRelEven = lambda g, k: g-np.arctan(k*np.tan(k/2))
 posRelOdd = lambda g, k: g+np.arctan(k/(np.tan(k/2)))
@@ -241,7 +242,6 @@ class Energy_Space_Projection:
         self._k_kappa_l = []
         self.add_states(energy_states, energy_proj_coeffs)
 
-
     def normalize(self) -> None:
         if self._num_energy_states == 0:
             return 0
@@ -249,11 +249,11 @@ class Energy_Space_Projection:
             norm = np.sum(np.power(np.abs(self._energy_proj_coeffs), 2))
             self._energy_proj_coeffs = self._energy_proj_coeffs*(1/np.sqrt(norm))
     
-
     def add_states(self, the_states: list, their_coeffs: np.ndarray) -> None:
         if isinstance(the_states, int):
             the_states = [the_states]
             print("single state converted to list: ", the_states)
+            their_coeffs = np.array([their_coeffs])
         
         self._num_energy_states += len(the_states)
         self._energy_proj_coeffs = np.append(self._energy_proj_coeffs, their_coeffs)
@@ -267,8 +267,6 @@ class Energy_Space_Projection:
             self._k_kappa_l.append(k_kappa_to_append)
             self._energies.append(energy_to_append)
             self._wiggle_factors.append(Wiggle_Factor(energy_to_append))
-
-
 
     def remove_states(self, the_states: list) -> None:
         if isinstance(the_states, int):
@@ -286,6 +284,13 @@ class Energy_Space_Projection:
             self._energy_states.remove(state)
 
         self.normalize()
+
+    def __str__(self) -> str:
+        fm = "[{0:2.3f} * exp(-i*{1:2.3f}*t) * |{2:}>]"
+        output = fm.format(self._energy_proj_coeffs[0], self._energies[0], self._energy_states[0])
+        for i in range(1, self._num_energy_states):
+            output += " + " + fm.format(self._energy_proj_coeffs[i], self._energies[i], self._energy_states[i])
+        return output
 
 class New_Momentum_Space_Projection:
     def __init__(self, new_k_space_wavefunction: Function_of_array_and_t, new_k_space_single_energy_proj: list) -> None:
@@ -380,7 +385,7 @@ class Projection_Handler:
         if isinstance(the_states, int):
             the_states = [the_states]
             print("single state converted to list: ", the_states)
-            the_energy_proj_coeffs = np.array([their_coeffs])
+            their_coeffs = np.array([their_coeffs])
 
         print("adding state(s): ", the_states)
 
@@ -446,6 +451,11 @@ class Particle_in_Box_State_v2:
         self._xsp = Position_Space_Projection(None_Function(), [])
         self._ksp = Momentum_Space_Projection(None_Function(), [])
         self._new_ksp = New_Momentum_Space_Projection(None_Function(), [])
+
+        self._L = energy_space_projection._L
+        self._m = energy_space_projection._m
+        self._gamma = energy_space_projection._gamma
+
         self._proj_handler = Projection_Handler(energy_space_projection, self._xsp, self._ksp, self._new_ksp)
 
     @staticmethod
@@ -476,8 +486,46 @@ class Particle_in_Box_State_v2:
     def new_k_space_wavefunction(self) -> New_Momentum_Space_Projection:
         return self._new_ksp._new_k_space_wavefunction
 
+
+class State_Plot:
+    def __init__(self, state: Particle_in_Box_State_v2):
+        self._state = state
+        self._fig = plt.figure()
+        self._gs = self._fig.add_gridspec(nrows=2, ncols=1)
+        self._lightColor = "#8bb1cc"
+        self._darkColor = "#0f4c75"
+
+    def add_x_space_axis(self):
+        self._x_space_axis = plt.axes()
+        self._x_space_axis.set_xlabel("$x$", loc="right")
+        self._x_space_axis.set_ylabel(r"$\langle x \vert l \rangle$", loc="top")
+        self._x_space_axis.set_xticks([-self._state._L/2, -self._state._L/4, 0, self._state._L/4, self._state._L/2])
+        self._x_space_axis.set_xticklabels([r"$-L/2$", r"$-L/4$", r"0", r"$-L/4$", r"$L/2$"])
+        self._x_space_axis.spines["bottom"].set_position("center")
+        self._x_space_axis.spines["left"].set_position("center")
+        self._x_space_axis.spines["top"].set_color("none")
+        self._x_space_axis.spines["right"].set_color("none")
+        self._x_space_axis.tick_params(direction="inout")
+        self._x_space_axis.set_ylim(-1, 1)
+
+    def add_k_space_axis(self):
+        self._k_space_axis = plt.axes()
+        self._k_space_axis.set_xlabel("$k$")
+        self._k_space_axis.set_ylabel("Probability Distribution / Density")
+        self._k_space_axis.legend(loc="upper left")
+        self._k_space_axis.grid(True, which="major", axis="y", lw=0.5, c="0.8")
+        self._k_space_axis.set_ylim([0, 0.5])
+
+
+
+
     
+
+
 class Particle_in_Box_State:
+    """
+    This class will soon be discarded from this branch
+    """
     _L = np.pi
     _gamma = 0
     _m = 1
@@ -691,6 +739,4 @@ class Particle_in_Box_State:
         return self._cont_k_space_wavefunc
 
     
-class State_Plot:
-    def __init__(self, state: Particle_in_Box_State):
-        self._state = state
+
