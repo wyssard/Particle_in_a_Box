@@ -1,4 +1,3 @@
-from numpy.lib.function_base import diff
 import particle_in_a_box as pib
 import numpy as np
 from matplotlib import pyplot as plt
@@ -25,7 +24,7 @@ class State_Plot:
 
         self._x_space_axis = self._fig.add_subplot(self._gs[1,0])
         self._x_space_axis.set_xlabel("$x$")
-        self._x_space_axis.set_ylabel(r"$\langle x \vert l \rangle$")
+        self._x_space_axis.set_ylabel(r"Probability Density")
         self._x_space_axis.set_xticks([-self._state._L/2, -self._state._L/4, 0, self._state._L/4, self._state._L/2])
         self._x_space_axis.set_xticklabels([r"$-L/2$", r"$-L/4$", r"0", r"$-L/4$", r"$L/2$"])
 
