@@ -1,24 +1,16 @@
+from __future__ import annotations
 from typing import List
 from typing import Callable
 import numpy as np
 from scipy.optimize import fsolve
 from abc import ABC, abstractmethod
 
+
 posRelEven = lambda g, k: g-np.arctan(k*np.tan(k/2))
 posRelOdd = lambda g, k: g+np.arctan(k/(np.tan(k/2)))
 
 negRelEven = lambda g, k: g+np.arctan(k*np.tanh(k/2))
 negRelOdd = lambda g, k: g+np.arctan(k/np.tanh(k/2))
-
-psi_l_Pos_odd = lambda L, kl, x: np.sqrt(2/L)*np.power(1+np.sin(kl*L)/(kl*L), -1/2)*np.cos(kl*x)
-psi_l_Pos_even = lambda L, kl, x: np.sqrt(2/L)*np.power(1-np.sin(kl*L)/(kl*L), -1/2)*np.sin(kl*x)
-psi_l_Neg_odd = lambda L, kappal, x: np.sqrt(2/L)*np.power(1+np.sinh(kappal*L)/(kappal*L), -1/2)*np.cosh(kappal*x)
-psi_l_Neg_even = lambda L, kappal, x: np.sqrt(2/L)*np.power(-1+np.sinh(kappal*L)/(kappal*L), -1/2)*np.sinh(kappal*x)
-
-momentum_Proj_Pos_even = lambda L, kl, k: np.sqrt(L/np.pi)/np.sqrt(1-np.sin(kl*L)/(kl*L))*(np.sin((kl+k)*L/2)/(kl*L+k*L) - np.sin((kl-k)*L/2)/(kl*L-k*L))
-momentum_Proj_Pos_odd = lambda L, kl, k: np.sqrt(L/np.pi)/np.sqrt(1+np.sin(kl*L)/(kl*L))*(np.sin((kl+k)*L/2)/(kl*L+k*L) + np.sin((kl-k)*L/2)/(kl*L-k*L))
-momentum_Proj_Neg_even = lambda L, kappal, k: (2j)*np.sqrt(L/np.pi)/np.sqrt(-1+np.sinh(kappal*L)/(kappal*L))*(k*L*np.cos(k*L/2)*np.sinh(kappal*L/2) - kappal*L*np.sin(k*L/2)*np.cosh(kappal*L/2))/((kappal*L)**2+(k*L)**2)
-momentum_Proj_Neg_odd = lambda L, kappal, k: (2)*np.sqrt(L/np.pi)/np.sqrt(1+np.sinh(kappal*L)/(kappal*L))*(k*L*np.cos(k*L/2)*np.sinh(kappal*L/2) + kappal*L*np.sin(k*L/2)*np.cosh(kappal*L/2))/((kappal*L)**2+(k*L)**2)
 
 def gamma_to_k(gamma, l, L):
     gammaPrime = np.arctan(gamma*L)
@@ -244,6 +236,7 @@ class Energy_Space_Projection:
         self._wiggle_factors = wiggle_factors
         self._sp = state_properties
         self._Norm = 0
+        self._exp_value = 0
         
     def normalize(self) -> None:
         if self._sp._num_energy_states == 0:
@@ -257,6 +250,12 @@ class Energy_Space_Projection:
         self._energy_proj_coeffs *= self._Norm
         self._energy_proj_coeffs[the_index] = the_coeff
         self.normalize()
+        self.compute_expectation_value()
+
+    def compute_expectation_value(self):
+        self._exp_value = 0
+        for i in range(self._sp._num_energy_states):
+            self._exp_value += (np.abs(self._energy_proj_coeffs[i])**2)*self._energies[i]
         
 class New_Momentum_Space_Projection:
     def __init__(self, new_k_space_wavefunction: Function_of_array_and_t, new_k_space_single_energy_proj: list, state_properties: State_Properties) -> None:
@@ -345,13 +344,11 @@ class Particle_in_Box_State:
 
         self.add_state(energy_states, amplitudes)
 
-
     def change_energy_proj_coeff(self, the_state: int, the_coeff: complex) -> None:
         self._esp.change_coeff(the_state, the_coeff)
         self._ksp.recombine(self._esp)
         self._xsp.recombine(self._esp)
         self._new_ksp.recombine(self._esp)
-
 
     def full_projection_recompute(self) -> None:
         print("Recomputing every property that depends on L or gamma...")
@@ -371,10 +368,10 @@ class Particle_in_Box_State:
             self._ksp._cont_k_space_single_energy_proj[l] = k_proj
             self._new_ksp._new_k_space_single_energy_proj[l] = self._conversion_factor_k_to_new_k*k_proj
 
+        self._esp.compute_expectation_value()
         self._ksp.recombine(self._esp)
         self._xsp.recombine(self._esp)
         self._new_ksp.recombine(self._esp)
-
 
     def add_state(self, the_states: list, the_energy_proj_coeffs: np.ndarray) -> None:
         if isinstance(the_states, int):
@@ -402,12 +399,15 @@ class Particle_in_Box_State:
             self._xsp._x_space_single_energy_proj.append(self._xsp.compute_x_space_proj_component(state))
             self._ksp._cont_k_space_single_energy_proj.append(k_proj_append)
             self._new_ksp._new_k_space_single_energy_proj.append(self._conversion_factor_k_to_new_k*k_proj_append)
-            
-        print("current config: ",self._sp._energy_states)
+        
+        self._esp.compute_expectation_value()
         
         self._ksp.recombine(self._esp)
         self._xsp.recombine(self._esp)
         self._new_ksp.recombine(self._esp)
+
+        print("current config: ", self._sp._energy_states)
+        print("energy expectation value: ", self._esp._exp_value)
 
     def remove_state(self, the_states: list) -> None:
         if isinstance(the_states, int):
@@ -430,15 +430,16 @@ class Particle_in_Box_State:
             # This absolutely needs to be the last action of this iteration!
             self._sp._energy_states.remove(state)
 
-        print("current config: ", self._sp._energy_states)
-        
         self._esp._energy_proj_coeffs *= self._esp._Norm
         self._esp.normalize()
+        self._esp.compute_expectation_value()
 
         self._ksp.recombine(self._esp)
         self._xsp.recombine(self._esp)
         self._new_ksp.recombine(self._esp)
 
+        print("current config: ", self._sp._energy_states)
+        print("energy expectation value: ", self._esp._exp_value)
 
     @property
     def x_space_wavefunction(self) -> Function_of_array_and_t:
@@ -483,6 +484,8 @@ class Particle_in_Box_State:
             self._esp._energies[l] = energy
             self._esp._wiggle_factors[l] = Wiggle_Factor(energy)
         
+        self._esp.compute_expectation_value()
         self._ksp.recombine(self._esp)
         self._xsp.recombine(self._esp)
         self._new_ksp.recombine(self._esp)
+        
