@@ -126,6 +126,11 @@ class Function_of_t(Function_Base):
     def __rmul__(self, other):
         return self.__mul__(other)
 
+
+    def get_real_part(self):
+        return Function_of_t(lambda t: np.real(self._function(t)))
+
+
 class Function_of_array(Function_Base):
     def __init__(self, function: Callable[[np.ndarray], np.ndarray]):
         Function_Base.__init__(self, function)
@@ -305,6 +310,7 @@ class Position_Space_Projection:
         self._x_space_wavefunction = x_space_wavefunction
         self._x_space_single_energy_proj = x_space_single_energy_proj
         self._sp = state_properties
+        self._expectation_value = None_Function()
 
     def recombine(self, energy_space_proj: Energy_Space_Projection) -> None:
         self._x_space_wavefunction = None_Function()
@@ -330,6 +336,45 @@ class Position_Space_Projection:
 
         return psi_to_append
 
+    def compute_expectation_value_component(self, odd_state: int, even_state: int) -> float:
+        if (-1)**odd_state == (-1)**even_state:
+            return 0
+        else:
+
+            if odd_state%2 == 0:
+                temp = odd_state
+                odd_state = even_state
+                even_state = temp
+
+            lhs_k = self._sp._k_kappa_l_array[self._sp._energy_states.index(odd_state)]
+            rhs_k = self._sp._k_kappa_l_array[self._sp._energy_states.index(even_state)]
+            L = self._sp._L
+            cos_expr = np.cos((lhs_k-rhs_k)*L/2)/((lhs_k-rhs_k)*L) - np.cos((lhs_k+rhs_k)*L/2)/((lhs_k+rhs_k)*L)
+            sin_expr = 2*(np.sin((lhs_k+rhs_k)*L/2)/(((lhs_k+rhs_k)*L)**2) - np.sin((lhs_k-rhs_k)*L/2)/(((lhs_k-rhs_k)*L)**2))
+            norm_expr = np.sqrt((1+np.sin(lhs_k*L)/(lhs_k*L))*(1-np.sin(rhs_k*L)/(rhs_k*L)))
+            print("<", odd_state, "| x |", even_state, "> =", (cos_expr + sin_expr)/norm_expr*L)
+            return (cos_expr + sin_expr)/norm_expr*L
+            
+    def compute_expectation_value(self, energy_space_proj: Energy_Space_Projection) -> None:
+        self._expectation_value = None_Function()
+
+        for rh_index in range(1, self._sp._num_energy_states):
+            rh_energy = energy_space_proj._energies[rh_index]
+            rh_coeff = energy_space_proj._energy_proj_coeffs[rh_index]
+            rh_state = self._sp._energy_states[rh_index]
+
+            for lh_index in range(0, rh_index):
+                lh_energy = energy_space_proj._energies[lh_index]
+                lh_coeff = energy_space_proj._energy_proj_coeffs[lh_index]
+                lh_state = self._sp._energy_states[lh_index]
+
+                wiggler = Wiggle_Factor(lh_energy-rh_energy)
+                exp_val_component = self.compute_expectation_value_component(lh_state, rh_state)    
+                coeff = complex(np.conj(lh_coeff)*rh_coeff)
+                temp_increment = (coeff*wiggler).get_real_part()
+                
+                self._expectation_value += (2*temp_increment*exp_val_component).get_real_part()
+
 
 class Particle_in_Box_State:
     def __init__(self, gamma: float, L: float, m: float, energy_states: list, amplitudes: np.ndarray) -> None:
@@ -346,6 +391,7 @@ class Particle_in_Box_State:
 
     def change_energy_proj_coeff(self, the_state: int, the_coeff: complex) -> None:
         self._esp.change_coeff(the_state, the_coeff)
+        self._xsp.compute_expectation_value(self._esp)
         self._ksp.recombine(self._esp)
         self._xsp.recombine(self._esp)
         self._new_ksp.recombine(self._esp)
@@ -369,6 +415,7 @@ class Particle_in_Box_State:
             self._new_ksp._new_k_space_single_energy_proj[l] = self._conversion_factor_k_to_new_k*k_proj
 
         self._esp.compute_expectation_value()
+        self._xsp.compute_expectation_value(self._esp)
         self._ksp.recombine(self._esp)
         self._xsp.recombine(self._esp)
         self._new_ksp.recombine(self._esp)
@@ -401,6 +448,7 @@ class Particle_in_Box_State:
             self._new_ksp._new_k_space_single_energy_proj.append(self._conversion_factor_k_to_new_k*k_proj_append)
         
         self._esp.compute_expectation_value()
+        self._xsp.compute_expectation_value(self._esp)
         
         self._ksp.recombine(self._esp)
         self._xsp.recombine(self._esp)
@@ -433,6 +481,7 @@ class Particle_in_Box_State:
         self._esp._energy_proj_coeffs *= self._esp._Norm
         self._esp.normalize()
         self._esp.compute_expectation_value()
+        self._xsp.compute_expectation_value(self._esp)
 
         self._ksp.recombine(self._esp)
         self._xsp.recombine(self._esp)
@@ -485,6 +534,7 @@ class Particle_in_Box_State:
             self._esp._wiggle_factors[l] = Wiggle_Factor(energy)
         
         self._esp.compute_expectation_value()
+        self._xsp.compute_expectation_value(self._esp)
         self._ksp.recombine(self._esp)
         self._xsp.recombine(self._esp)
         self._new_ksp.recombine(self._esp)
