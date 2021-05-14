@@ -210,11 +210,11 @@ class X_Space_Proj_Neg_Even(Function_of_array):
 
 class K_Space_Proj_Pos_Even(Function_of_array):
     def __init__(self, L, kl):
-        Function_of_array.__init__(self, lambda k: np.sqrt(L/np.pi)/np.sqrt(1-np.sin(kl*L)/(kl*L))*(np.sin((kl+k)*L/2)/(kl*L+k*L) - np.sin((kl-k)*L/2)/(kl*L-k*L)))
+        Function_of_array.__init__(self, lambda k: 1j*np.sqrt(L/np.pi)/np.sqrt(1 - np.sin(kl*L)/(kl*L))*(np.sin((kl+k)*L/2)/(kl*L+k*L) - np.sin((kl-k)*L/2)/(kl*L-k*L)))
 
 class K_Space_Proj_Pos_Odd(Function_of_array):
     def __init__(self, L, kl):
-        Function_of_array.__init__(self, lambda k: np.sqrt(L/np.pi)/np.sqrt(1+np.sin(kl*L)/(kl*L))*(np.sin((kl+k)*L/2)/(kl*L+k*L) + np.sin((kl-k)*L/2)/(kl*L-k*L)))
+        Function_of_array.__init__(self, lambda k: np.sqrt(L/np.pi)/np.sqrt(1 + np.sin(kl*L)/(kl*L))*(np.sin((kl+k)*L/2)/(kl*L+k*L) + np.sin((kl-k)*L/2)/(kl*L-k*L)))
 
 class K_Space_Proj_Neg_Even(Function_of_array):
     def __init__(self, L, kappal):
