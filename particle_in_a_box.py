@@ -16,13 +16,19 @@ def gamma_to_k(gamma, l, L):
     gammaPrime = np.arctan(gamma*L)
     length = np.size(gamma)
 
+    if gamma == 0:
+        return np.full(length, l*np.pi/L)
+    
+    if gamma == np.inf:
+        return np.full(length, (l-1)*np.pi/L)
+
     if l > 2:
         if l%2 == 0:
             rel = posRelOdd
-            #print("Odd Case")
+            ##print("Odd Case")
         else:
             rel = posRelEven
-            #print("Even Case")
+            ##print("Even Case")
 
         kGuess = np.full(length, l-1)*np.pi
         kSolve = fsolve(lambda k: rel(gammaPrime, k), kGuess)
@@ -435,7 +441,7 @@ class Position_Space_Projection:
         cos_expr = np.cos((lhs_k-rhs_k)*L/2)/((lhs_k-rhs_k)*L) - np.cos((lhs_k+rhs_k)*L/2)/((lhs_k+rhs_k)*L)
         sin_expr = 2*(np.sin((lhs_k+rhs_k)*L/2)/(((lhs_k+rhs_k)*L)**2) - np.sin((lhs_k-rhs_k)*L/2)/(((lhs_k-rhs_k)*L)**2))
         norm_expr = np.sqrt((1+np.sin(lhs_k*L)/(lhs_k*L))*(1-np.sin(rhs_k*L)/(rhs_k*L)))
-        print("<", odd_state, "| x |", even_state, "> =", (cos_expr + sin_expr)/norm_expr*L)
+        #print("<", odd_state, "| x |", even_state, "> =", (cos_expr + sin_expr)/norm_expr*L)
         return (cos_expr + sin_expr)/norm_expr*L
        
     def compute_expectation_value(self, energy_space_proj: Energy_Space_Projection) -> None:
@@ -490,7 +496,7 @@ class Particle_in_Box_State:
         self._new_ksp.recombine(self._esp)
 
     def full_projection_recompute(self) -> None:
-        print("Recomputing every property that depends on L or gamma...")
+        #print("Recomputing every property that depends on L or gamma...")
         self._conversion_factor_k_to_new_k = np.sqrt(np.pi/self._sp.L)
 
         for l in range(self._sp.num_energy_states):
@@ -515,10 +521,10 @@ class Particle_in_Box_State:
     def add_state(self, the_states: list, the_energy_proj_coeffs: np.ndarray) -> None:
         if isinstance(the_states, int):
             the_states = [the_states]
-            print("single state converted to list: ", the_states)
+            #print("single state converted to list: ", the_states)
             the_energy_proj_coeffs = np.array([the_energy_proj_coeffs])
 
-        print("adding state(s): ", the_states)
+        #print("adding state(s): ", the_states)
 
         self._esp._energy_proj_coeffs = np.append(self._esp._energy_proj_coeffs*(self._esp._Norm), the_energy_proj_coeffs)
         self._sp.num_energy_states += len(the_states)
@@ -545,15 +551,15 @@ class Particle_in_Box_State:
         self._xsp.recombine(self._esp)
         self._new_ksp.recombine(self._esp)
 
-        print("current config: ", self._sp.energy_states)
-        print("energy expectation value: ", self._esp._exp_value)
+        #print("current config: ", self._sp.energy_states)
+        #print("energy expectation value: ", self._esp._exp_value)
 
     def remove_state(self, the_states: list) -> None:
         if isinstance(the_states, int):
-            print("single state converted to list: ", the_states)
+            #print("single state converted to list: ", the_states)
             the_states = [the_states]
         
-        print("removing state(s): ", the_states)
+        #print("removing state(s): ", the_states)
         self._sp.num_energy_states -= len(the_states)
 
         for state in the_states:
@@ -577,8 +583,8 @@ class Particle_in_Box_State:
         self._xsp.recombine(self._esp)
         self._new_ksp.recombine(self._esp)
 
-        print("current config: ", self._sp.energy_states)
-        print("energy expectation value: ", self._esp._exp_value)
+        #print("current config: ", self._sp.energy_states)
+        #print("energy expectation value: ", self._esp._exp_value)
 
     def compute_expectation_values(self) -> None:
         self._esp.compute_expectation_value()
