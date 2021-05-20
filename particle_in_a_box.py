@@ -189,9 +189,46 @@ class Wiggle_Factor(Function_of_t):
         Function_of_t.__init__(self, lambda t: np.exp(-1j*self._energy*t))
     
 
-class X_Space_Projector_Symmetric:
-    @staticmethod
-    def get_projection(L: float, kl: complex, l: int) -> None:
+
+class l_to_kl_mapper:
+    def __init__(self, energy_states: List[int], k_kappa_l: List[complex]) -> None:
+        self._energy_states = energy_states
+        self._k_kappa_l_array = k_kappa_l
+
+    def get_kl(self, l: int) -> complex:
+        return self._k_kappa_l_array[self._energy_states.index(l)]
+
+    def get_index(self, l: int) -> int:
+        return self._energy_states.index(l)
+    
+    @property
+    def energy_states(self) -> List[int]:
+        return self._energy_states
+
+    @property
+    def k_kappa_l(self) -> List[complex]:
+        return self._k_kappa_l_array
+
+
+class Energy_State_Projector(ABC):
+    def __init__(self, L: float, l_to_k_mapper_ref: l_to_kl_mapper) -> None:
+        self._L = L
+        self._l_kl_map = l_to_k_mapper_ref
+    
+    @abstractmethod
+    def get_projection(self, l: int) -> Function_of_array:
+        pass
+
+    def set_L(self, L: float) -> None:
+        self._L = L
+
+class X_Space_Projector_Symmetric(Energy_State_Projector):
+    def __init__(self, L: float, l_kl_map: l_to_kl_mapper):
+        Energy_State_Projector.__init__(self, L, l_kl_map)
+
+    def get_projection(self, l: int) -> Function_of_array:
+        L = self._L
+        kl = self._l_kl_map.get_kl(l)
         if l%2 == 0:
             if np.imag(kl) == 0:
                  return Function_of_array(lambda x: np.sqrt(2/L)*np.power(1-np.sin(kl*L)/(kl*L), -1/2)*np.sin(kl*x))
@@ -205,9 +242,14 @@ class X_Space_Projector_Symmetric:
                 kappal = np.imag(kl)
                 return Function_of_array(lambda x: np.sqrt(2/L)*np.power(1+np.sinh(kappal*L)/(kappal*L), -1/2)*np.cosh(kappal*x))
 
-class K_Space_Projector_Symmetric:
-    @staticmethod
-    def get_projection(L: float, kl: float, l: int) -> None:
+class K_Space_Projector_Symmetric(Energy_State_Projector):
+    def __init__(self, L: float, l_kl_map: l_to_kl_mapper):
+        Energy_State_Projector.__init__(self, L, l_kl_map)
+
+    def get_projection(self, l: int) -> Function_of_array:
+        L = self._L
+        kl = self._l_kl_map.get_kl(l)
+
         if l%2 == 0:
             if np.imag(kl) == 0:
                 return Function_of_array(lambda k: 1j*np.sqrt(L/np.pi)/np.sqrt(1 - np.sin(kl*L)/(kl*L))*(np.sin((kl+k)*L/2)/(kl*L+k*L) - np.sin((kl-k)*L/2)/(kl*L-k*L)))
@@ -221,6 +263,64 @@ class K_Space_Projector_Symmetric:
                 kappal = np.imag(kl)
                 return Function_of_array(lambda k: (2)*np.sqrt(L/np.pi)/np.sqrt(1+np.sinh(kappal*L)/(kappal*L))*(k*L*np.cos(k*L/2)*np.sinh(kappal*L/2) + kappal*L*np.sin(k*L/2)*np.cosh(kappal*L/2))/((kappal*L)**2+(k*L)**2))
 
+
+class Energy_State_Matrix_Elements(ABC):
+    def __init__(self, L: float, l_to_k_mapper_ref: l_to_kl_mapper) -> None:
+        self._L = L
+        self._l_kl_map = l_to_k_mapper_ref
+
+    @abstractmethod
+    def get_matrix_element(self, lhs_state: int, rhs_state: int) -> complex:
+        pass
+
+    def set_L(self, L: float) -> None:
+        self._L = L 
+
+class Bra_l1_x_Ket_l2_Symmetric(Energy_State_Matrix_Elements):
+    def __init__(self, L: float, l_to_k_mapper_ref: l_to_kl_mapper) -> None:
+        super().__init__(L, l_to_k_mapper_ref)
+
+    def get_matrix_element(self, lhs_state: int, rhs_state: int) -> complex:
+        if lhs_state%2 == rhs_state%2:
+            return 0
+        
+        if lhs_state%2 == 0:
+            temp = lhs_state
+            lhs_state = rhs_state
+            rhs_state = temp
+
+        lhs_k = self._l_kl_map.get_kl(lhs_state)
+        rhs_k = self._l_kl_map.get_kl(rhs_state)
+        L = self._L
+
+        cos_expr = np.cos((lhs_k-rhs_k)*L/2)/((lhs_k-rhs_k)*L) - np.cos((lhs_k+rhs_k)*L/2)/((lhs_k+rhs_k)*L)
+        sin_expr = 2*(np.sin((lhs_k+rhs_k)*L/2)/(((lhs_k+rhs_k)*L)**2) - np.sin((lhs_k-rhs_k)*L/2)/(((lhs_k-rhs_k)*L)**2))
+        norm_expr = np.sqrt((1+np.sin(lhs_k*L)/(lhs_k*L))*(1-np.sin(rhs_k*L)/(rhs_k*L)))
+        return (cos_expr + sin_expr)/norm_expr*L
+    
+class Bra_l1_pR_Ket_l2_Symmetric(Energy_State_Matrix_Elements):
+    def __init__(self, L: float, l_to_k_mapper_ref: l_to_kl_mapper) -> None:
+        super().__init__(L, l_to_k_mapper_ref)
+
+    def get_matrix_element(self, lhs_state: int, rhs_state: int) -> complex:
+        if lhs_state%2 == rhs_state%2:
+            return 0
+        
+        lhs_k = self._l_kl_map.get_kl(lhs_state)
+        rhs_k = self._l_kl_map.get_kl(rhs_state)
+        L = self._L
+
+        if lhs_state%2 == 1:
+            norm_expr = np.sqrt((1+np.sin(lhs_k*L)/(lhs_k*L))*(1-np.sin(rhs_k*L)/rhs_k*L))
+            sin_expr = np.sin((lhs_k+rhs_k)*L/2)/((lhs_k+rhs_k)*L) + np.sin((lhs_k-rhs_k)*L/2)/((lhs_k-rhs_k)*L)
+
+            return -2j*rhs_k*norm_expr*sin_expr
+        
+        elif lhs_state%2 == 0:
+            norm_expr = np.sqrt((1-np.sin(lhs_k*L)/(lhs_k*L))*(1+np.sin(rhs_k*L)/rhs_k*L))
+            sin_expr = np.sin((lhs_k+rhs_k)*L/2)/((lhs_k+rhs_k)*L) - np.sin((lhs_k-rhs_k)*L/2)/((lhs_k-rhs_k)*L)
+
+            return -2j*rhs_k*norm_expr*sin_expr
 
 
 
@@ -279,6 +379,9 @@ class Gamma_to_k(ABC):
     def set_gamma(self, gamma: float) -> None:
         pass
 
+    def set_L(self, L: float) -> None:
+        self._L = L
+
 class Gamma_to_k_Symmetric(Gamma_to_k):
     def __init__(self, L: float, gamma: float) -> None:
         Gamma_to_k.__init__(self, L)
@@ -291,22 +394,30 @@ class Gamma_to_k_Symmetric(Gamma_to_k):
         self._gamma = gamma
 
 
+
+
+
 class State_Properties:
     def __init__(self, case: str, gamma: float, L: float, m: float) -> None:
         self._gamma = gamma
         self._L = L
         self._m = m
-        self._num_energy_states = 0 
         self._energy_states = []
         self._k_kappa_l_array = []
+        self._num_energy_states = 0 
+
+        self._l_kl_map = l_to_kl_mapper(self._energy_states, self._k_kappa_l_array)
+
         self._case = case
         self.switch_case(case)
         
     def switch_case(self, case: str):
         if case == "parity_symmetric":
             self.gamma_to_k_projector = Gamma_to_k_Symmetric(self._L, self._gamma)
-            self.energy_state_x_space_projector = X_Space_Projector_Symmetric()
-            self.energy_state_k_space_projector = K_Space_Projector_Symmetric()
+            self.energy_state_x_space_projector = X_Space_Projector_Symmetric(self._L, self._l_kl_map)
+            self.energy_state_k_space_projector = K_Space_Projector_Symmetric(self._L, self._l_kl_map)
+            self.energy_state_x_matrix_elements = Bra_l1_x_Ket_l2_Symmetric(self._L, self._l_kl_map)
+            self.energy_state_k_matrix_elements = Bra_l1_pR_Ket_l2_Symmetric(self._L, self._l_kl_map)
 
     @property
     def case(self) -> str:
@@ -328,6 +439,12 @@ class State_Properties:
     @L.setter
     def L(self, new_L) -> None:
         self._L = new_L
+        self.gamma_to_k_projector.set_L(new_L)
+        self.energy_state_x_space_projector.set_L(new_L)
+        self.energy_state_k_space_projector.set_L(new_L)
+        self.energy_state_x_matrix_elements.set_L(new_L)
+        self.energy_state_k_matrix_elements.set_L(new_L)
+
 
     @property
     def m(self) -> float:
@@ -353,6 +470,10 @@ class State_Properties:
     def k_kappa_l(self) -> List[complex]:
         return self._k_kappa_l_array
 
+    @property
+    def l_kl_map(self) -> l_to_kl_mapper:
+        return self._l_kl_map
+
     
 class Energy_Space_Projection:
     def __init__(self, energies: list, energy_proj_coeffs: np.ndarray, wiggle_factors: List[Wiggle_Factor], state_properties: State_Properties) -> None:
@@ -371,7 +492,8 @@ class Energy_Space_Projection:
             self._energy_proj_coeffs = self._energy_proj_coeffs*(1/self._Norm)
 
     def change_coeff(self, the_state, the_coeff):
-        the_index = self._sp.energy_states.index(the_state)
+        the_index = self._sp.l_kl_map.get_index(the_state)
+        #the_index = self._sp.energy_states.index(the_state)
         self._energy_proj_coeffs *= self._Norm
         self._energy_proj_coeffs[the_index] = the_coeff
         self.normalize()
@@ -409,7 +531,8 @@ class Momentum_Space_Projection:
             self._cont_k_space_wavefunction += temp_proj_coeff[i]*self._cont_k_space_single_energy_proj[i]*temp_wigglers[i]
     
     def compute_k_space_proj_component(self, the_state: int) -> Function_of_array:
-        the_index = self._sp.energy_states.index(the_state)
+        the_index = self._sp.l_kl_map.get_index(the_state)
+        #the_index = self._sp.energy_states.index(the_state)
         the_k = self._sp.k_kappa_l[the_index]
 
         
@@ -430,8 +553,11 @@ class Momentum_Space_Projection:
         if left_hand_l%2 == right_hand_l%2:
             return 0
         
-        lhs_k = self._sp.k_kappa_l[self._sp.energy_states.index(left_hand_l)]
-        rhs_k = self._sp.k_kappa_l[self._sp.energy_states.index(right_hand_l)]
+        lhs_k = self._sp.l_kl_map.get_kl(left_hand_l)
+        rhs_k = self._sp.l_kl_map.get_kl(right_hand_l)
+
+        #lhs_k = self._sp.k_kappa_l[self._sp.energy_states.index(left_hand_l)]
+        #rhs_k = self._sp.k_kappa_l[self._sp.energy_states.index(right_hand_l)]
         L = self._sp.L
 
         if left_hand_l%2 == 1:
@@ -464,7 +590,9 @@ class Momentum_Space_Projection:
 
                     coeff = complex(np.conj(lh_coeff)*rh_coeff)
                     wiggler = Wiggle_Factor(-lh_energy+rh_energy)
-                    exp_val_component = self.compute_expectation_value_component(lh_state, rh_state)
+
+                    exp_val_component = self._sp.energy_state_k_matrix_elements.get_matrix_element(lh_state, rh_state)
+                    #exp_val_component = self.compute_expectation_value_component(lh_state, rh_state)
 
                     self._expectation_value += (coeff*wiggler*exp_val_component).get_real_part()
 
@@ -485,7 +613,8 @@ class Position_Space_Projection:
             self._x_space_wavefunction += temp_proj_coeff[i]*self._x_space_single_energy_proj[i]*temp_wigglers[i]
     
     def compute_x_space_proj_component(self, the_state: int) -> Function_of_array:
-        the_index = self._sp.energy_states.index(the_state)
+        the_index = self._sp.l_kl_map.get_index(the_state)
+        #the_index = self._sp.energy_states.index(the_state)
         the_k = self._sp.k_kappa_l[the_index]
         
         if the_state%2 == 0:
@@ -511,8 +640,12 @@ class Position_Space_Projection:
             odd_state = even_state
             even_state = temp
 
-        lhs_k = self._sp.k_kappa_l[self._sp.energy_states.index(odd_state)]
-        rhs_k = self._sp.k_kappa_l[self._sp.energy_states.index(even_state)]
+        lhs_k = self._sp.l_kl_map.get_kl(odd_state)
+        rhs_k = self._sp.l_kl_map.get_kl(even_state)
+
+        #lhs_k = self._sp.k_kappa_l[self._sp.energy_states.index(odd_state)]
+        #rhs_k = self._sp.k_kappa_l[self._sp.energy_states.index(even_state)]
+
         L = self._sp.L
         cos_expr = np.cos((lhs_k-rhs_k)*L/2)/((lhs_k-rhs_k)*L) - np.cos((lhs_k+rhs_k)*L/2)/((lhs_k+rhs_k)*L)
         sin_expr = 2*(np.sin((lhs_k+rhs_k)*L/2)/(((lhs_k+rhs_k)*L)**2) - np.sin((lhs_k-rhs_k)*L/2)/(((lhs_k-rhs_k)*L)**2))
@@ -540,7 +673,9 @@ class Position_Space_Projection:
                     lh_state = self._sp.energy_states[lh_index]
 
                     wiggler = Wiggle_Factor(rh_energy-lh_energy)
-                    exp_val_component = self.compute_expectation_value_component(lh_state, rh_state)    
+
+                    exp_val_component = self._sp.energy_state_x_matrix_elements.get_matrix_element(lh_state, rh_state)
+                    #exp_val_component = self.compute_expectation_value_component(lh_state, rh_state)    
                     coeff = complex(np.conj(lh_coeff)*rh_coeff)
                     append = coeff*wiggler
 
@@ -584,8 +719,8 @@ class Particle_in_Box_State:
             self._esp._energies[l] = energy
             self._esp._wiggle_factors[l] = Wiggle_Factor(energy)
 
-            k_proj = self._sp.energy_state_k_space_projector.get_projection(self._sp.L, k_kappa, state)
-            x_proj = self._sp.energy_state_x_space_projector.get_projection(self._sp.L, k_kappa, state)
+            k_proj = self._sp.energy_state_k_space_projector.get_projection(state)
+            x_proj = self._sp.energy_state_x_space_projector.get_projection(state)
             self._xsp._x_space_single_energy_proj[l] = x_proj
             self._ksp._cont_k_space_single_energy_proj[l] = k_proj
             self._new_ksp._new_k_space_single_energy_proj[l] = self._conversion_factor_k_to_new_k*k_proj
@@ -617,8 +752,8 @@ class Particle_in_Box_State:
             self._esp._energies.append(energy_to_append)
             self._esp._wiggle_factors.append(Wiggle_Factor(energy_to_append))
 
-            k_proj_append = self._sp.energy_state_k_space_projector.get_projection(self._sp.L, k_kappa_to_append, state)
-            x_proj_append = self._sp.energy_state_x_space_projector.get_projection(self._sp.L, k_kappa_to_append, state)
+            k_proj_append = self._sp.energy_state_k_space_projector.get_projection(state)
+            x_proj_append = self._sp.energy_state_x_space_projector.get_projection(state)
 
             self._xsp._x_space_single_energy_proj.append(x_proj_append)
             self._ksp._cont_k_space_single_energy_proj.append(k_proj_append)
@@ -642,7 +777,8 @@ class Particle_in_Box_State:
         self._sp.num_energy_states -= len(the_states)
 
         for state in the_states:
-            the_index = self._sp.energy_states.index(state)
+            the_index = self._sp.l_kl_map.get_index(state)
+            #the_index = self._sp.energy_states.index(state)
             self._esp._energy_proj_coeffs = np.delete(self._esp._energy_proj_coeffs, the_index)
             self._sp.k_kappa_l.pop(the_index)
             self._esp._energies.pop(the_index)
