@@ -19,11 +19,13 @@ def momentum_space_gaussian(a, k_0, k) -> float:
     output = np.sqrt(2*a*np.sqrt(np.pi))*np.exp(-a**2/2*(k-k_0)**2)
     return output
 
-def construct_gaussian(L, a, k_0, num) -> List[list]:
+def project_gaussian(L, a, l_0, num, which) -> List[list]:
     states = []
     amplitudes = []
+    k_0 = np.pi/L*l_0
+    state_range = range(l_0-num, l_0+num)
 
-    for state in range(k_0-num, k_0+num):
+    for state in state_range:
         states.append(state)
         k = state*np.pi/L
         psi_append_pos = momentum_space_gaussian(a, k_0, k)
@@ -32,26 +34,42 @@ def construct_gaussian(L, a, k_0, num) -> List[list]:
             amplitudes.append(1j*(psi_append_pos-psi_append_neg))
         else:
             amplitudes.append(psi_append_pos + psi_append_neg)
+
+    if (0 in state_range) and which == "neumann":
+        amplitudes[state_range.index(0)] = np.sqrt(2)*momentum_space_gaussian(a, k_0, 0)
+
     
     return [states, amplitudes]
 
 
+fps = 20
+time = 50
+speed = 0.01
+
+case = "neumann"
 L = np.pi
-gamma = 10000
 m = 1
 a = L/10
-k_0 = 100
+l_0 = 100
+k_0 = l_0*np.pi/L
+k_range = 15
 
-gaussian_proj = construct_gaussian(L, a, k_0, 15)
+if case == "neumann":
+    gamma = 0.000001
+    gaussian_proj = project_gaussian(L, a, l_0, k_range, "neumann")
+elif case == "dirichlet":
+    gamma = 100000
+    gaussian_proj = project_gaussian(L, a, l_0, k_range, "dirichlet")
+
 states = gaussian_proj[0]
 amplitudes = gaussian_proj[1]
 
 myState = pib.Particle_in_Box_State(gamma, L, m, states, amplitudes)
 
 # Create Animations
-x = np.arange(-L/2, L/2, 0.01)
+x = np.arange(-L/2, L/2+0.01, 0.01)
 kb = k_0+15
-k = np.arange(-kb, kb, 0.01)
+k = np.arange(-kb, kb+0.01, 0.01)
 kn = np.arange(-kb, kb+1, 1)
 
 x_space_wavefunc = myState.x_space_wavefunction
@@ -78,9 +96,7 @@ k_bars = k_distr_plot.bar(kn, np.abs(new_k_space_wavefunc(kn, 0))**2, animated=T
 x_exp_line = x_distr_plot.axvline(x_exp_val(0), animated=True, color = darkColor)
 k_exp_line = k_distr_plot.axvline(k_exp_val(0), animated=True, color = darkColor)
 
-fps = 20
-time = 55
-speed = 0.01
+
 
 if myState._sp._num_energy_states == 2:
     time = 2*np.pi/abs(myState._esp._energies[0]-myState._esp._energies[1])/speed
@@ -105,5 +121,5 @@ def animate(i):
     return x_lines + k_lines + [x_exp_line] + [k_exp_line] + list(k_bars)
 
 anim = FuncAnimation(fig, animate, init_func=init, frames=int(num_frames), interval=int(1/fps*1000), blit=True)
-anim.save(".\\Demo_Animations\\bouncing_gaussian.mp4")
+anim.save(".\\Demo_Animations\\bouncing_gaussian_" + case + "_" + str(time) + "s.mp4")
 
