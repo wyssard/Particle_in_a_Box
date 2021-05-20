@@ -1,401 +1,5 @@
-from __future__ import annotations
-from typing import List
-from typing import Callable
-import numpy as np
-from scipy.optimize import fsolve
-from abc import ABC, abstractmethod
-
-
-posRelEven = lambda g, k: g-np.arctan(k*np.tan(k/2))
-posRelOdd = lambda g, k: g+np.arctan(k/(np.tan(k/2)))
-
-negRelEven = lambda g, k: g+np.arctan(k*np.tanh(k/2))
-negRelOdd = lambda g, k: g+np.arctan(k/np.tanh(k/2))
-
-def gamma_to_k(gamma, l, L):
-    gammaPrime = np.arctan(gamma*L)
-    length = np.size(gamma)
-
-    if gamma == 0:
-        return np.full(length, l*np.pi/L)
-    
-    if gamma == np.inf:
-        return np.full(length, (l-1)*np.pi/L)
-
-    if l > 2:
-        if l%2 == 0:
-            rel = posRelOdd
-            ##print("Odd Case")
-        else:
-            rel = posRelEven
-            ##print("Even Case")
-
-        kGuess = np.full(length, l-1)*np.pi
-        kSolve = fsolve(lambda k: rel(gammaPrime, k), kGuess)
-        return kSolve/L
-
-    if l == 1:
-        gammaGreaterZero = gammaPrime[gammaPrime >= 0]
-        gammaSmallerZero = gammaPrime[gammaPrime < 0]
-
-        lGreater = np.size(gammaGreaterZero)
-
-        kGuessPosLowestEven = np.linspace(0.5, 1, lGreater)*np.pi
-        KGuessNegLowestEven = -np.tan(gammaSmallerZero)
-
-        kSolvePosLowestEven = np.array([])
-        kSolveNegLowestEven = np.array([])
-
-        if np.size(gammaGreaterZero) > 0:
-            kSolvePosLowestEven = fsolve(lambda k: posRelEven(gammaGreaterZero, k), kGuessPosLowestEven)
-        if np.size(gammaSmallerZero) > 0:
-            kSolveNegLowestEven = fsolve(lambda k: negRelEven(gammaSmallerZero, k), KGuessNegLowestEven)
-            
-        return np.concatenate((kSolveNegLowestEven*1j, kSolvePosLowestEven))/L
-        #return {"k" : kSolvePosLowestEven, "kappa" : kSolveNegLowestEven}
-
-    if l == 2:
-        gammaGreaterMinusLHlaf = gammaPrime[gammaPrime >= np.arctan(-2)]
-        gammaSmallerMinusLHlaf = gammaPrime[gammaPrime < np.arctan(-2)]
-
-        lGreater = np.size(gammaGreaterMinusLHlaf)
-
-        kGuessPosLowestOdd = np.full(lGreater, 1)*np.pi
-        kGuessNegLowestOdd = -np.tan(gammaSmallerMinusLHlaf)
-
-        kSolvePosLowestOdd = np.array([])
-        kSolveNegLowestOdd = np.array([])
-
-        if np.size(gammaGreaterMinusLHlaf) > 0:
-            kSolvePosLowestOdd = fsolve(lambda k: posRelOdd(gammaGreaterMinusLHlaf, k), kGuessPosLowestOdd)
-        if np.size(gammaSmallerMinusLHlaf) > 0:
-            kSolveNegLowestOdd = fsolve(lambda k: negRelOdd(gammaSmallerMinusLHlaf, k), kGuessNegLowestOdd)
-
-        return np.concatenate((kSolveNegLowestOdd*1j, kSolvePosLowestOdd))/L
-
-
-class Function_Base(ABC):
-    def __init__(self, function: Callable):
-        self._function = function
-
-    @abstractmethod
-    def __call__(self, args):
-        pass
-
-    @abstractmethod
-    def __add__(self, other):
-        pass
-    
-    @abstractmethod
-    def __mul__(self, other):
-        pass
-
-    @abstractmethod
-    def __rmul__(self, other):
-        pass
-
-class None_Function(Function_Base):
-    def __init__(self):
-        Function_Base.__init__(self, None)
-
-    def __call__(self):
-        return self._function
-
-    def __add__(self, other: Function_Base):
-        return other
-    
-    def __mul__(self):
-        return self
-
-    def __rmul__(self):
-        return self
-
-class Function_of_t(Function_Base):
-    def __init__(self, function: Callable[[float], float]):
-        Function_Base.__init__(self, function)
-
-    def __call__(self, t: float):
-        return self._function(t)
-    
-    def __add__(self, other: Function_Base):
-        return Function_of_t(lambda t: self._function(t) + other._function(t))
-
-        
-    def __mul__(self, other):
-        if isinstance(other, Function_of_t):
-            return Function_of_t(lambda t: self._function(t)*other._function(t))
-        elif isinstance(other, Function_of_array):
-            return Function_of_array_and_t(lambda n,t: self._function(t)*other._function(n))
-        elif isinstance(other, (int, float, complex)):
-            return Function_of_t(lambda t: other*self._function(t))
-
-    def __rmul__(self, other):
-        return self.__mul__(other)
-
-
-    def get_real_part(self):
-        return Function_of_t(lambda t: np.real(self._function(t)))
-
-
-class Function_of_array(Function_Base):
-    def __init__(self, function: Callable[[np.ndarray], np.ndarray]):
-        Function_Base.__init__(self, function)
-
-    def __call__(self, n: np.ndarray):
-        return self._function(n)
-
-    def __add__(self, other: Function_Base):
-        return Function_of_array(lambda n: self._function(n) + other._function(n))
-
-    def __mul__(self, other):
-        if isinstance(other, Function_of_t):
-            return Function_of_array_and_t(lambda n,t: self._function(n)*other._function(t))
-        elif isinstance(other, Function_of_array):
-            return Function_of_array(lambda n: self._function(n)*other._function(n))
-        elif isinstance(other, (int, float, complex)):
-            return Function_of_array(lambda n: other*self._function(n))
-
-    def __rmul__(self, other):
-        return self.__mul__(other)
-
-class Function_of_array_and_t(Function_Base):
-    def __init__(self, function: Callable[[np.ndarray, float], float]):
-        Function_Base.__init__(self, function)
-
-    def __call__(self, x: np.ndarray, t: float):
-        return self._function(x, t)
-        
-    def __add__(self, other):
-        if isinstance(other, None_Function):
-            return self
-        else:
-            return Function_of_array_and_t(lambda x,t: self._function(x,t) + other._function(x,t))
-
-    def __mul__(self, other):
-        if isinstance(other, Function_of_array_and_t):
-            return Function_of_array_and_t(lambda x, t: self._function(x,t)*other._function(x,t))
-        if isinstance(other, (complex, float, int)):
-            return Function_of_array_and_t(lambda x, t: other*self._function(x,t))
-        if isinstance(other, Wiggle_Factor):
-            return Function_of_array_and_t(lambda x,t: other(t)*self._function(x,t))
-    
-    def __rmul__(self, other):
-        return self.__mul__(other)
-
-
-class Wiggle_Factor(Function_of_t):
-    def __init__(self, energy: float):
-        self._energy = energy
-        Function_of_t.__init__(self, lambda t: np.exp(-1j*self._energy*t))
-    
-
-
-class l_to_kl_mapper:
-    def __init__(self, energy_states: List[int], k_kappa_l: List[complex]) -> None:
-        self._energy_states = energy_states
-        self._k_kappa_l_array = k_kappa_l
-
-    def get_kl(self, l: int) -> complex:
-        return self._k_kappa_l_array[self._energy_states.index(l)]
-
-    def get_index(self, l: int) -> int:
-        return self._energy_states.index(l)
-    
-    @property
-    def energy_states(self) -> List[int]:
-        return self._energy_states
-
-    @property
-    def k_kappa_l(self) -> List[complex]:
-        return self._k_kappa_l_array
-
-
-class Energy_State_Projector(ABC):
-    def __init__(self, L: float, l_to_k_mapper_ref: l_to_kl_mapper) -> None:
-        self._L = L
-        self._l_kl_map = l_to_k_mapper_ref
-    
-    @abstractmethod
-    def get_projection(self, l: int) -> Function_of_array:
-        pass
-
-    def set_L(self, L: float) -> None:
-        self._L = L
-
-class X_Space_Projector_Symmetric(Energy_State_Projector):
-    def __init__(self, L: float, l_kl_map: l_to_kl_mapper):
-        Energy_State_Projector.__init__(self, L, l_kl_map)
-
-    def get_projection(self, l: int) -> Function_of_array:
-        L = self._L
-        kl = self._l_kl_map.get_kl(l)
-        if l%2 == 0:
-            if np.imag(kl) == 0:
-                 return Function_of_array(lambda x: np.sqrt(2/L)*np.power(1-np.sin(kl*L)/(kl*L), -1/2)*np.sin(kl*x))
-            else:
-                kappal = np.imag(kl)
-                return Function_of_array(lambda x: np.sqrt(2/L)*np.power(-1+np.sinh(kappal*L)/(kappal*L), -1/2)*np.sinh(kappal*x))
-        else:
-            if np.imag(kl) == 0:
-                return Function_of_array(lambda x: np.sqrt(2/L)*np.power(1+np.sin(kl*L)/(kl*L), -1/2)*np.cos(kl*x))
-            else:
-                kappal = np.imag(kl)
-                return Function_of_array(lambda x: np.sqrt(2/L)*np.power(1+np.sinh(kappal*L)/(kappal*L), -1/2)*np.cosh(kappal*x))
-
-class K_Space_Projector_Symmetric(Energy_State_Projector):
-    def __init__(self, L: float, l_kl_map: l_to_kl_mapper):
-        Energy_State_Projector.__init__(self, L, l_kl_map)
-
-    def get_projection(self, l: int) -> Function_of_array:
-        L = self._L
-        kl = self._l_kl_map.get_kl(l)
-
-        if l%2 == 0:
-            if np.imag(kl) == 0:
-                return Function_of_array(lambda k: 1j*np.sqrt(L/np.pi)/np.sqrt(1 - np.sin(kl*L)/(kl*L))*(np.sin((kl+k)*L/2)/(kl*L+k*L) - np.sin((kl-k)*L/2)/(kl*L-k*L)))
-            else:
-                kappal = np.imag(kl)
-                return Function_of_array(lambda k: (2j)*np.sqrt(L/np.pi)/np.sqrt(-1+np.sinh(kappal*L)/(kappal*L))*(k*L*np.cos(k*L/2)*np.sinh(kappal*L/2) - kappal*L*np.sin(k*L/2)*np.cosh(kappal*L/2))/((kappal*L)**2+(k*L)**2))
-        else:
-            if np.imag(kl) == 0:
-                return Function_of_array(lambda k: np.sqrt(L/np.pi)/np.sqrt(1 + np.sin(kl*L)/(kl*L))*(np.sin((kl+k)*L/2)/(kl*L+k*L) + np.sin((kl-k)*L/2)/(kl*L-k*L)))
-            else:
-                kappal = np.imag(kl)
-                return Function_of_array(lambda k: (2)*np.sqrt(L/np.pi)/np.sqrt(1+np.sinh(kappal*L)/(kappal*L))*(k*L*np.cos(k*L/2)*np.sinh(kappal*L/2) + kappal*L*np.sin(k*L/2)*np.cosh(kappal*L/2))/((kappal*L)**2+(k*L)**2))
-
-
-class Energy_State_Matrix_Elements(ABC):
-    def __init__(self, L: float, l_to_k_mapper_ref: l_to_kl_mapper) -> None:
-        self._L = L
-        self._l_kl_map = l_to_k_mapper_ref
-
-    @abstractmethod
-    def get_matrix_element(self, lhs_state: int, rhs_state: int) -> complex:
-        pass
-
-    def set_L(self, L: float) -> None:
-        self._L = L 
-
-class Bra_l1_x_Ket_l2_Symmetric(Energy_State_Matrix_Elements):
-    def __init__(self, L: float, l_to_k_mapper_ref: l_to_kl_mapper) -> None:
-        super().__init__(L, l_to_k_mapper_ref)
-
-    def get_matrix_element(self, lhs_state: int, rhs_state: int) -> complex:
-        if lhs_state%2 == rhs_state%2:
-            return 0
-        
-        if lhs_state%2 == 0:
-            temp = lhs_state
-            lhs_state = rhs_state
-            rhs_state = temp
-
-        lhs_k = self._l_kl_map.get_kl(lhs_state)
-        rhs_k = self._l_kl_map.get_kl(rhs_state)
-        L = self._L
-
-        cos_expr = np.cos((lhs_k-rhs_k)*L/2)/((lhs_k-rhs_k)*L) - np.cos((lhs_k+rhs_k)*L/2)/((lhs_k+rhs_k)*L)
-        sin_expr = 2*(np.sin((lhs_k+rhs_k)*L/2)/(((lhs_k+rhs_k)*L)**2) - np.sin((lhs_k-rhs_k)*L/2)/(((lhs_k-rhs_k)*L)**2))
-        norm_expr = np.sqrt((1+np.sin(lhs_k*L)/(lhs_k*L))*(1-np.sin(rhs_k*L)/(rhs_k*L)))
-        return (cos_expr + sin_expr)/norm_expr*L
-    
-class Bra_l1_pR_Ket_l2_Symmetric(Energy_State_Matrix_Elements):
-    def __init__(self, L: float, l_to_k_mapper_ref: l_to_kl_mapper) -> None:
-        super().__init__(L, l_to_k_mapper_ref)
-
-    def get_matrix_element(self, lhs_state: int, rhs_state: int) -> complex:
-        if lhs_state%2 == rhs_state%2:
-            return 0
-        
-        lhs_k = self._l_kl_map.get_kl(lhs_state)
-        rhs_k = self._l_kl_map.get_kl(rhs_state)
-        L = self._L
-
-        if lhs_state%2 == 1:
-            norm_expr = np.sqrt((1+np.sin(lhs_k*L)/(lhs_k*L))*(1-np.sin(rhs_k*L)/rhs_k*L))
-            sin_expr = np.sin((lhs_k+rhs_k)*L/2)/((lhs_k+rhs_k)*L) + np.sin((lhs_k-rhs_k)*L/2)/((lhs_k-rhs_k)*L)
-
-            return -2j*rhs_k*norm_expr*sin_expr
-        
-        elif lhs_state%2 == 0:
-            norm_expr = np.sqrt((1-np.sin(lhs_k*L)/(lhs_k*L))*(1+np.sin(rhs_k*L)/rhs_k*L))
-            sin_expr = np.sin((lhs_k+rhs_k)*L/2)/((lhs_k+rhs_k)*L) - np.sin((lhs_k-rhs_k)*L/2)/((lhs_k-rhs_k)*L)
-
-            return -2j*rhs_k*norm_expr*sin_expr
-
-
-
-class X_Space_Proj_Pos_Odd(Function_of_array):
-    def __init__(self, L, kl):
-        self._L = L
-        self._kl = kl
-        Function_of_array.__init__(self, lambda x: np.sqrt(2/L)*np.power(1+np.sin(kl*L)/(kl*L), -1/2)*np.cos(kl*x))
-    
-class X_Space_Proj_Pos_Even(Function_of_array):
-    def __init__(self, L, kl):
-        self._L = L
-        self._kl = kl
-        Function_of_array.__init__(self, lambda x: np.sqrt(2/L)*np.power(1-np.sin(kl*L)/(kl*L), -1/2)*np.sin(kl*x))
-
-class X_Space_Proj_Neg_Odd(Function_of_array):
-    def __init__(self, L, kappal):
-        self._L = L
-        self._kappal = kappal
-        Function_of_array.__init__(self, lambda x: np.sqrt(2/L)*np.power(1+np.sinh(kappal*L)/(kappal*L), -1/2)*np.cosh(kappal*x))
-        
-class X_Space_Proj_Neg_Even(Function_of_array):
-    def __init__(self, L, kappal):
-        self._L = L
-        self._kappal = kappal
-        Function_of_array.__init__(self, lambda x: np.sqrt(2/L)*np.power(-1+np.sinh(kappal*L)/(kappal*L), -1/2)*np.sinh(kappal*x))
-
-
-class K_Space_Proj_Pos_Even(Function_of_array):
-    def __init__(self, L, kl):
-        Function_of_array.__init__(self, lambda k: 1j*np.sqrt(L/np.pi)/np.sqrt(1 - np.sin(kl*L)/(kl*L))*(np.sin((kl+k)*L/2)/(kl*L+k*L) - np.sin((kl-k)*L/2)/(kl*L-k*L)))
-
-class K_Space_Proj_Pos_Odd(Function_of_array):
-    def __init__(self, L, kl):
-        Function_of_array.__init__(self, lambda k: np.sqrt(L/np.pi)/np.sqrt(1 + np.sin(kl*L)/(kl*L))*(np.sin((kl+k)*L/2)/(kl*L+k*L) + np.sin((kl-k)*L/2)/(kl*L-k*L)))
-
-class K_Space_Proj_Neg_Even(Function_of_array):
-    def __init__(self, L, kappal):
-        Function_of_array.__init__(self, lambda k: (2j)*np.sqrt(L/np.pi)/np.sqrt(-1+np.sinh(kappal*L)/(kappal*L))*(k*L*np.cos(k*L/2)*np.sinh(kappal*L/2) - kappal*L*np.sin(k*L/2)*np.cosh(kappal*L/2))/((kappal*L)**2+(k*L)**2))
-
-class K_Space_Proj_Neg_Odd(Function_of_array):
-    def __init__(self, L, kappal):
-        Function_of_array.__init__(self, lambda k: (2)*np.sqrt(L/np.pi)/np.sqrt(1+np.sinh(kappal*L)/(kappal*L))*(k*L*np.cos(k*L/2)*np.sinh(kappal*L/2) + kappal*L*np.sin(k*L/2)*np.cosh(kappal*L/2))/((kappal*L)**2+(k*L)**2))
-
-
-
-class Gamma_to_k(ABC):
-    def __init__(self, L: float) -> None:
-        self._L = L
-
-    @abstractmethod
-    def __call__(self, l: int) -> complex:
-        pass
-
-    @abstractmethod
-    def set_gamma(self, gamma: float) -> None:
-        pass
-
-    def set_L(self, L: float) -> None:
-        self._L = L
-
-class Gamma_to_k_Symmetric(Gamma_to_k):
-    def __init__(self, L: float, gamma: float) -> None:
-        Gamma_to_k.__init__(self, L)
-        self._gamma = gamma
-
-    def __call__(self, l: int) -> complex:
-        return gamma_to_k(self._gamma, l, self._L)[0]
-
-    def set_gamma(self, gamma: float) -> None:
-        self._gamma = gamma
-
-
-
-
+from Backend import *
+import Symmetric_Case as symmetric
 
 class State_Properties:
     def __init__(self, case: str, gamma: float, L: float, m: float) -> None:
@@ -413,11 +17,11 @@ class State_Properties:
         
     def switch_case(self, case: str):
         if case == "parity_symmetric":
-            self.gamma_to_k_projector = Gamma_to_k_Symmetric(self._L, self._gamma)
-            self.energy_state_x_space_projector = X_Space_Projector_Symmetric(self._L, self._l_kl_map)
-            self.energy_state_k_space_projector = K_Space_Projector_Symmetric(self._L, self._l_kl_map)
-            self.energy_state_x_matrix_elements = Bra_l1_x_Ket_l2_Symmetric(self._L, self._l_kl_map)
-            self.energy_state_k_matrix_elements = Bra_l1_pR_Ket_l2_Symmetric(self._L, self._l_kl_map)
+            self.gamma_to_k_projector = symmetric.Gamma_to_k(self._L, self._gamma)
+            self.energy_state_x_space_projector = symmetric.X_Space_Projector(self._L, self._l_kl_map)
+            self.energy_state_k_space_projector = symmetric.K_Space_Projector(self._L, self._l_kl_map)
+            self.energy_state_x_matrix_elements = symmetric.Bra_l1_x_Ket_l2(self._L, self._l_kl_map)
+            self.energy_state_k_matrix_elements = symmetric.Bra_l1_pR_Ket_l2(self._L, self._l_kl_map)
 
     @property
     def case(self) -> str:
@@ -473,7 +77,6 @@ class State_Properties:
     @property
     def l_kl_map(self) -> l_to_kl_mapper:
         return self._l_kl_map
-
     
 class Energy_Space_Projection:
     def __init__(self, energies: list, energy_proj_coeffs: np.ndarray, wiggle_factors: List[Wiggle_Factor], state_properties: State_Properties) -> None:
@@ -530,48 +133,6 @@ class Momentum_Space_Projection:
         for i in range(len(temp_proj_coeff)):
             self._cont_k_space_wavefunction += temp_proj_coeff[i]*self._cont_k_space_single_energy_proj[i]*temp_wigglers[i]
     
-    def compute_k_space_proj_component(self, the_state: int) -> Function_of_array:
-        the_index = self._sp.l_kl_map.get_index(the_state)
-        #the_index = self._sp.energy_states.index(the_state)
-        the_k = self._sp.k_kappa_l[the_index]
-
-        
-        if the_state%2 == 0:
-            if np.imag(the_k) == 0:
-                phi_to_append = K_Space_Proj_Pos_Even(self._sp.L, the_k)
-            else:
-                phi_to_append = K_Space_Proj_Neg_Even(self._sp.L, np.imag(the_k))
-        else:
-            if np.imag(the_k) == 0:
-                phi_to_append = K_Space_Proj_Pos_Odd(self._sp.L, the_k)
-            else:
-                phi_to_append = K_Space_Proj_Neg_Odd(self._sp.L, np.imag(the_k))
-
-        return phi_to_append
-        
-    def compute_expectation_value_component(self, left_hand_l: int, right_hand_l: int) -> complex:
-        if left_hand_l%2 == right_hand_l%2:
-            return 0
-        
-        lhs_k = self._sp.l_kl_map.get_kl(left_hand_l)
-        rhs_k = self._sp.l_kl_map.get_kl(right_hand_l)
-
-        #lhs_k = self._sp.k_kappa_l[self._sp.energy_states.index(left_hand_l)]
-        #rhs_k = self._sp.k_kappa_l[self._sp.energy_states.index(right_hand_l)]
-        L = self._sp.L
-
-        if left_hand_l%2 == 1:
-            norm_expr = np.sqrt((1+np.sin(lhs_k*L)/(lhs_k*L))*(1-np.sin(rhs_k*L)/rhs_k*L))
-            sin_expr = np.sin((lhs_k+rhs_k)*L/2)/((lhs_k+rhs_k)*L) + np.sin((lhs_k-rhs_k)*L/2)/((lhs_k-rhs_k)*L)
-
-            return -2j*rhs_k*norm_expr*sin_expr
-        
-        elif left_hand_l%2 == 0:
-            norm_expr = np.sqrt((1-np.sin(lhs_k*L)/(lhs_k*L))*(1+np.sin(rhs_k*L)/rhs_k*L))
-            sin_expr = np.sin((lhs_k+rhs_k)*L/2)/((lhs_k+rhs_k)*L) - np.sin((lhs_k-rhs_k)*L/2)/((lhs_k-rhs_k)*L)
-
-            return -2j*rhs_k*norm_expr*sin_expr
-
     def compute_expectation_value(self, energy_space_proj: Energy_Space_Projection) -> None:
         self._expectation_value = None_Function()
         if self._sp.num_energy_states == 1:
@@ -596,7 +157,6 @@ class Momentum_Space_Projection:
 
                     self._expectation_value += (coeff*wiggler*exp_val_component).get_real_part()
 
-
 class Position_Space_Projection:
     def __init__(self, x_space_wavefunction: Function_of_array_and_t, x_space_single_energy_proj: list, state_properties: State_Properties) -> None:
         self._x_space_wavefunction = x_space_wavefunction
@@ -611,47 +171,6 @@ class Position_Space_Projection:
         temp_wigglers = energy_space_proj._wiggle_factors
         for i in range(len(temp_proj_coeff)):
             self._x_space_wavefunction += temp_proj_coeff[i]*self._x_space_single_energy_proj[i]*temp_wigglers[i]
-    
-    def compute_x_space_proj_component(self, the_state: int) -> Function_of_array:
-        the_index = self._sp.l_kl_map.get_index(the_state)
-        #the_index = self._sp.energy_states.index(the_state)
-        the_k = self._sp.k_kappa_l[the_index]
-        
-        if the_state%2 == 0:
-            if np.imag(the_k)==0:
-                psi_to_append = X_Space_Proj_Pos_Even(self._sp.L, the_k)
-            else:
-                psi_to_append = X_Space_Proj_Neg_Even(self._sp.L, np.imag(the_k))
-        else:
-            if np.imag(the_k)==0:
-                psi_to_append = X_Space_Proj_Pos_Odd(self._sp.L, the_k)
-            else:
-                psi_to_append = X_Space_Proj_Neg_Odd(self._sp.L, np.imag(the_k))
-
-        return psi_to_append
-        
-
-    def compute_expectation_value_component(self, odd_state: int, even_state: int) -> complex:
-        if odd_state%2 == even_state%2:
-            return 0
-        
-        if odd_state%2 == 0:
-            temp = odd_state
-            odd_state = even_state
-            even_state = temp
-
-        lhs_k = self._sp.l_kl_map.get_kl(odd_state)
-        rhs_k = self._sp.l_kl_map.get_kl(even_state)
-
-        #lhs_k = self._sp.k_kappa_l[self._sp.energy_states.index(odd_state)]
-        #rhs_k = self._sp.k_kappa_l[self._sp.energy_states.index(even_state)]
-
-        L = self._sp.L
-        cos_expr = np.cos((lhs_k-rhs_k)*L/2)/((lhs_k-rhs_k)*L) - np.cos((lhs_k+rhs_k)*L/2)/((lhs_k+rhs_k)*L)
-        sin_expr = 2*(np.sin((lhs_k+rhs_k)*L/2)/(((lhs_k+rhs_k)*L)**2) - np.sin((lhs_k-rhs_k)*L/2)/(((lhs_k-rhs_k)*L)**2))
-        norm_expr = np.sqrt((1+np.sin(lhs_k*L)/(lhs_k*L))*(1-np.sin(rhs_k*L)/(rhs_k*L)))
-        #print("<", odd_state, "| x |", even_state, "> =", (cos_expr + sin_expr)/norm_expr*L)
-        return (cos_expr + sin_expr)/norm_expr*L
        
     def compute_expectation_value(self, energy_space_proj: Energy_Space_Projection) -> None:
         self._expectation_value = None_Function()
@@ -681,8 +200,6 @@ class Position_Space_Projection:
 
                     self._expectation_value += (2*append*exp_val_component).get_real_part()
                     self._exp_t_deriv += (2j*(lh_energy-rh_energy)*append*exp_val_component).get_real_part()
-
-
 
 class Particle_in_Box_State:
     def __init__(self, case: str, gamma: float, L: float, m: float, energy_states: list, amplitudes: np.ndarray) -> None:
@@ -854,4 +371,4 @@ class Particle_in_Box_State:
         self._ksp.recombine(self._esp)
         self._xsp.recombine(self._esp)
         self._new_ksp.recombine(self._esp)
-        
+    
