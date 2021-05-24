@@ -14,6 +14,7 @@ class State_Properties:
 
         self._case = case
         self.switch_case(case)
+   
         
     def switch_case(self, case: str):
         if case == "parity_symmetric":
@@ -96,7 +97,6 @@ class Energy_Space_Projection:
 
     def change_coeff(self, the_state, the_coeff):
         the_index = self._sp.l_kl_map.get_index(the_state)
-        #the_index = self._sp.energy_states.index(the_state)
         self._energy_proj_coeffs *= self._Norm
         self._energy_proj_coeffs[the_index] = the_coeff
         self.normalize()
@@ -153,7 +153,6 @@ class Momentum_Space_Projection:
                     wiggler = Wiggle_Factor(-lh_energy+rh_energy)
 
                     exp_val_component = self._sp.energy_state_k_matrix_elements.get_matrix_element(lh_state, rh_state)
-                    #exp_val_component = self.compute_expectation_value_component(lh_state, rh_state)
 
                     self._expectation_value += (coeff*wiggler*exp_val_component).get_real_part()
 
@@ -193,8 +192,7 @@ class Position_Space_Projection:
 
                     wiggler = Wiggle_Factor(rh_energy-lh_energy)
 
-                    exp_val_component = self._sp.energy_state_x_matrix_elements.get_matrix_element(lh_state, rh_state)
-                    #exp_val_component = self.compute_expectation_value_component(lh_state, rh_state)    
+                    exp_val_component = self._sp.energy_state_x_matrix_elements.get_matrix_element(lh_state, rh_state) 
                     coeff = complex(np.conj(lh_coeff)*rh_coeff)
                     append = coeff*wiggler
 
@@ -295,7 +293,6 @@ class Particle_in_Box_State:
 
         for state in the_states:
             the_index = self._sp.l_kl_map.get_index(state)
-            #the_index = self._sp.energy_states.index(state)
             self._esp._energy_proj_coeffs = np.delete(self._esp._energy_proj_coeffs, the_index)
             self._sp.k_kappa_l.pop(the_index)
             self._esp._energies.pop(the_index)

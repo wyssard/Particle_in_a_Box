@@ -24,6 +24,13 @@ class Function_Base(ABC):
     def __rmul__(self, other):
         pass
 
+    @abstractmethod
+    def get_real_part(self):
+        pass
+
+    @abstractmethod
+    def get_imag_part(self):
+        pass
 
 class None_Function(Function_Base):
     def __init__(self):
@@ -40,6 +47,12 @@ class None_Function(Function_Base):
 
     def __rmul__(self):
         return self
+
+    def get_real_part(self):
+        return None
+
+    def get_imag_part(self):
+        return None
 
 
 class Function_of_t(Function_Base):
@@ -68,6 +81,9 @@ class Function_of_t(Function_Base):
     def get_real_part(self):
         return Function_of_t(lambda t: np.real(self._function(t)))
 
+    def get_imag_part(self):
+        return Function_of_t(lambda t: np.imag(self._function(t)))
+
 
 class Function_of_array(Function_Base):
     def __init__(self, function: Callable[[np.ndarray], np.ndarray]):
@@ -89,6 +105,12 @@ class Function_of_array(Function_Base):
 
     def __rmul__(self, other):
         return self.__mul__(other)
+
+    def get_real_part(self):
+        return Function_of_array(lambda n: np.real(self._function(n)))
+    
+    def get_imag_part(self):
+        return Function_of_array(lambda n: np.imag(self._function(n)))
 
 
 class Function_of_array_and_t(Function_Base):
@@ -114,6 +136,12 @@ class Function_of_array_and_t(Function_Base):
     
     def __rmul__(self, other):
         return self.__mul__(other)
+
+    def get_real_part(self):
+        return Function_of_array_and_t(lambda x,t: np.real(self._function(x,t)))
+
+    def get_imag_part(self):
+        return Function_of_array_and_t(lambda x,t: np.imag(self._function(x,t)))
 
 
 class Wiggle_Factor(Function_of_t):
@@ -175,8 +203,10 @@ class Gamma_to_k_Base(ABC):
     @abstractmethod
     def __call__(self, l: int) -> complex:
         pass
+    
+    def set_eps(self, eps: float) -> None:
+        pass
 
-    @abstractmethod
     def set_gamma(self, gamma: float) -> None:
         pass
 

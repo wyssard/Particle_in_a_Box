@@ -3,6 +3,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib.animation import FuncAnimation
 from typing import List
+import Special_States as special
 
 lightColor = "#8bb1cc"
 darkColor = "#0f4c75"
