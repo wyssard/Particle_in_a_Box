@@ -49,6 +49,9 @@ class Bouncing_Gaussian(pib.Particle_in_Box_State):
         self._gamma_to_k = pib.symmetric.Gamma_to_k(self._L, self._gamma)
         self._k_0_alt = self._gamma_to_k(l_0)
 
+        print("k_0: ", self._k_0)
+        print("k_0_alt: ", self._k_0_alt)
+
         self.find_amplitudes()
         super().__init__("symmetric", self._gamma, L, m, self._states, self._amplitudes)
 

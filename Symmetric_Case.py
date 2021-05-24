@@ -3,6 +3,7 @@ from __future__ import annotations
 from Backend import *
 from scipy.optimize import fsolve
 from scipy.optimize import brentq
+import sys
 
 posRelEven = lambda g, k: g-np.arctan(k*np.tan(k/2))
 posRelOdd = lambda g, k: g+np.arctan(k/(np.tan(k/2)))
@@ -17,10 +18,10 @@ def gamma_to_k(gamma, l, L):
     if l > 2:
         if l%2 == 0:
             rel = posRelOdd
-            ##print("Odd Case")
+            ###print("Odd Case")
         else:
             rel = posRelEven
-            ##print("Even Case")
+            ###print("Even Case")
 
         kGuess = np.full(length, l-1)*np.pi
         kSolve = fsolve(lambda k: rel(gammaPrime, k), kGuess)
@@ -114,7 +115,10 @@ class Bra_l1_x_Ket_l2(Energy_State_Matrix_Elements):
         super().__init__(L, l_to_k_mapper_ref)
 
     def get_matrix_element(self, lhs_state: int, rhs_state: int) -> complex:
+        #print("computing x matrix element...")
+        #print("lhs_state: ", lhs_state, " rhs_state: ", rhs_state)
         if lhs_state%2 == rhs_state%2:
+            #print("terminating early")
             return 0
         
         if lhs_state%2 == 1:
@@ -122,37 +126,75 @@ class Bra_l1_x_Ket_l2(Energy_State_Matrix_Elements):
             lhs_state = rhs_state
             rhs_state = temp
 
-        print("compute <", lhs_state, "| x |", rhs_state, ">...")
+        ##print("compute <", lhs_state, "| x |", rhs_state, ">...")
 
         lhs_k = self._l_kl_map.get_kl(lhs_state)
         rhs_k = self._l_kl_map.get_kl(rhs_state)
         L = self._L
 
-        print("rhs_k: ", rhs_k, "lhs_k: ", lhs_k)
+        #print("rhs_k: ", rhs_k, "lhs_k: ", lhs_k)
 
-        cos_expr = np.cos((lhs_k-rhs_k)*L/2)/((lhs_k-rhs_k)*L) - np.cos((lhs_k+rhs_k)*L/2)/((lhs_k+rhs_k)*L)
-        sin_expr = 2*(np.sin((lhs_k+rhs_k)*L/2)/(((lhs_k+rhs_k)*L)**2) - np.sin((lhs_k-rhs_k)*L/2)/(((lhs_k-rhs_k)*L)**2))
-        norm_expr = np.sqrt((1+np.sin(lhs_k*L)/(lhs_k*L))*(1-np.sin(rhs_k*L)/(rhs_k*L)))
+        if np.imag(lhs_k) == 0:
+            if np.imag(rhs_k) == 0:
+                cos_expr = np.cos((lhs_k-rhs_k)*L/2)/((lhs_k-rhs_k)*L) - np.cos((lhs_k+rhs_k)*L/2)/((lhs_k+rhs_k)*L)
+                sin_expr = np.sin((lhs_k+rhs_k)*L/2)/(((lhs_k+rhs_k)*L)**2) - np.sin((lhs_k-rhs_k)*L/2)/(((lhs_k-rhs_k)*L)**2)
+                norm_expr = np.sqrt((1+np.sin(lhs_k*L)/(lhs_k*L))*(1-np.sin(rhs_k*L)/(rhs_k*L)))
+                return (cos_expr + 2*sin_expr)/norm_expr*L
 
-        return (cos_expr + sin_expr)/norm_expr*L
-    
+            else:
+                rhs_kappa = np.imag(rhs_k)
+                #print("Aborting Program: the case <l1|x|l2> where |l1> has positive and |l2> has negative energy is not yet implemented")
+                sys.exit()
+        else:
+            lhs_kappa = np.imag(lhs_k)
+            if np.imag(rhs_k) == 0:
+                #print("Aborting Program: the case <l1|x|l2> where |l1> has negative and |l2> has positive energy is not yet implemented")
+                sys.exit()
+            else:
+                rhs_kappa = np.imag(rhs_k)
+                cosh_expr = np.cosh((lhs_kappa+rhs_kappa)*L/2)/((lhs_kappa+rhs_kappa)*L) - np.cosh((lhs_kappa-rhs_kappa)*L/2)/((lhs_kappa-rhs_kappa)*L)
+                sinh_expr = np.sinh((lhs_kappa-rhs_kappa)*L/2)/((lhs_kappa*L-rhs_kappa*L)**2) - np.sinh((lhs_kappa+rhs_kappa)*L/2)/((lhs_kappa*L+rhs_kappa*L)**2)
+                norm_expr = np.sqrt((1+np.sinh(lhs_kappa*L)/(lhs_kappa*L))*(-1+np.sinh(rhs_kappa*L)/(rhs_kappa*L)))
+                return (cosh_expr + 2*sinh_expr)/norm_expr*L
+
 class Bra_l1_pR_Ket_l2(Energy_State_Matrix_Elements):
     def __init__(self, L: float, l_to_k_mapper_ref: l_to_kl_mapper) -> None:
         super().__init__(L, l_to_k_mapper_ref)
 
     def get_matrix_element(self, lhs_state: int, rhs_state: int) -> complex:
+        #print("computing p matrix element...")
         if lhs_state%2 == rhs_state%2:
             return 0
         
         lhs_k = self._l_kl_map.get_kl(lhs_state)
         rhs_k = self._l_kl_map.get_kl(rhs_state)
         L = self._L
+        lhs_sign = (-1)**lhs_state
+        rhs_sign = -lhs_sign
 
-        
-        norm_expr = np.sqrt((1+np.sin(lhs_k*L)/(lhs_k*L))*(1-np.sin(rhs_k*L)/rhs_k*L))
-        sin_expr = np.sin((lhs_k+rhs_k)*L/2)/((lhs_k+rhs_k)*L) + ((-1)**lhs_state)*np.sin((lhs_k-rhs_k)*L/2)/((lhs_k-rhs_k)*L)
+        if np.imag(lhs_k) == 0:
+            if np.imag(rhs_k) == 0:
+                norm_expr = np.sqrt((1 + lhs_sign*np.sin(lhs_k*L)/(lhs_k*L))*(1 + rhs_sign*np.sin(rhs_k*L)/rhs_k*L))
+                sin_expr = np.sin((lhs_k+rhs_k)*L/2)/((lhs_k+rhs_k)*L) + lhs_sign*np.sin((lhs_k-rhs_k)*L/2)/((lhs_k-rhs_k)*L)
+                return (-2j)*rhs_k*sin_expr/norm_expr
 
-        return -2j*rhs_k*norm_expr*sin_expr
+            else:
+                rhs_kappa = np.imag(rhs_k)
+                #print("Aborting Program: the case <l1|x|l2> where |l1> has positive and |l2> has negative energy is not yet implemented")
+                sys.exit()
+
+        else:
+            lhs_kappa = np.imag(lhs_k)
+            if np.imag(rhs_k) == 0:
+                #print("Aborting Program: the case <l1|x|l2> where |l1> has negative and |l2> has positive energy is not yet implemented")
+                sys.exit()
+
+            else:
+
+                rhs_kappa = np.imag(rhs_k)
+                norm_expr = np.sqrt((lhs_sign + np.sinh(lhs_kappa*L)/(lhs_kappa*L))*(rhs_sign + np.sinh(rhs_kappa*L)/(rhs_kappa*L)))
+                sinh_expr = np.sinh((lhs_kappa+rhs_kappa)*L/2)/((lhs_kappa+rhs_kappa)*L) + lhs_sign*np.sinh((lhs_kappa-rhs_kappa)*L/2)/((lhs_kappa-rhs_kappa)*L)
+                return (-2j)*rhs_kappa*sinh_expr/norm_expr
         
 
 class Gamma_to_k(Gamma_to_k_Base):
@@ -186,7 +228,7 @@ class Gamma_to_k(Gamma_to_k_Base):
             else:
                 transc_eq = self._neg_energy_even_state_eq
                 kL_approx = -gammaL
-                kL_solution = fsolve(lambda Kl: transc_eq(gammaL, Kl), kL_approx)
+                kL_solution = fsolve(lambda Kl: transc_eq(gammaL, Kl), kL_approx)[0]
                 return 1j*kL_solution/self._L
 
         elif l == 1:
@@ -202,7 +244,7 @@ class Gamma_to_k(Gamma_to_k_Base):
             else:
                 transc_eq = self._neg_energy_odd_state_eq
                 kL_approx = -gammaL
-                kL_solution = fsolve(lambda Kl: transc_eq(gammaL, Kl), kL_approx)
+                kL_solution = fsolve(lambda Kl: transc_eq(gammaL, Kl), kL_approx)[0]
                 return 1j*kL_solution/self._L
 
         else:

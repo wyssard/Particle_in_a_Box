@@ -17,7 +17,7 @@ class State_Properties:
    
         
     def switch_case(self, case: str):
-        if case == "parity_symmetric":
+        if case == "symmetric":
             self.gamma_to_k_projector = symmetric.Gamma_to_k(self._L, self._gamma)
             self.energy_state_x_space_projector = symmetric.X_Space_Projector(self._L, self._l_kl_map)
             self.energy_state_k_space_projector = symmetric.K_Space_Projector(self._L, self._l_kl_map)
@@ -222,7 +222,7 @@ class Particle_in_Box_State:
         self._new_ksp.recombine(self._esp)
 
     def full_projection_recompute(self) -> None:
-        #print("Recomputing every property that depends on L or gamma...")
+        ##print("Recomputing every property that depends on L or gamma...")
         self._conversion_factor_k_to_new_k = np.sqrt(np.pi/self._sp.L)
 
         for l in range(self._sp.num_energy_states):
@@ -248,10 +248,10 @@ class Particle_in_Box_State:
     def add_state(self, the_states: list, the_energy_proj_coeffs: np.ndarray) -> None:
         if isinstance(the_states, int):
             the_states = [the_states]
-            #print("single state converted to list: ", the_states)
+            ##print("single state converted to list: ", the_states)
             the_energy_proj_coeffs = np.array([the_energy_proj_coeffs])
 
-        #print("adding state(s): ", the_states)
+        ##print("adding state(s): ", the_states)
 
         self._esp._energy_proj_coeffs = np.append(self._esp._energy_proj_coeffs*(self._esp._Norm), the_energy_proj_coeffs)
         self._sp.num_energy_states += len(the_states)
@@ -280,15 +280,15 @@ class Particle_in_Box_State:
         self._xsp.recombine(self._esp)
         self._new_ksp.recombine(self._esp)
 
-        #print("current config: ", self._sp.energy_states)
-        #print("energy expectation value: ", self._esp._exp_value)
+        ##print("current config: ", self._sp.energy_states)
+        ##print("energy expectation value: ", self._esp._exp_value)
 
     def remove_state(self, the_states: list) -> None:
         if isinstance(the_states, int):
-            #print("single state converted to list: ", the_states)
+            ##print("single state converted to list: ", the_states)
             the_states = [the_states]
         
-        #print("removing state(s): ", the_states)
+        ##print("removing state(s): ", the_states)
         self._sp.num_energy_states -= len(the_states)
 
         for state in the_states:
@@ -312,10 +312,11 @@ class Particle_in_Box_State:
         self._xsp.recombine(self._esp)
         self._new_ksp.recombine(self._esp)
 
-        #print("current config: ", self._sp.energy_states)
-        #print("energy expectation value: ", self._esp._exp_value)
+        ##print("current config: ", self._sp.energy_states)
+        ##print("energy expectation value: ", self._esp._exp_value)
 
     def compute_expectation_values(self) -> None:
+        #print("computing expectation values...")
         self._esp.compute_expectation_value()
         self._xsp.compute_expectation_value(self._esp)
         self._ksp.compute_expectation_value(self._esp)

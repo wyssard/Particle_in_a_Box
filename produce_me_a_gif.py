@@ -16,36 +16,6 @@ plt.rcParams['animation.writer'] = 'ffmpeg'
 plt.rcParams["animation.html"] = "jshtml"
 plt.rcParams['animation.ffmpeg_path'] = 'C:\\ffmpeg\\bin\\ffmpeg.exe'
 
-def momentum_space_gaussian(a, k_0, k) -> float:
-    output = np.sqrt(2*a*np.sqrt(np.pi))*np.exp(-a**2/2*(k-k_0)**2)
-    return output
-
-def project_gaussian(L, a, l_0, num, which) -> List[list]:
-    states = []
-    amplitudes = []
-    k_0 = np.pi/L*l_0
-    state_range = range(l_0-num, l_0+num)
-
-    for state in state_range:
-        states.append(state)
-        k = state*np.pi/L
-        psi_append_pos = momentum_space_gaussian(a, k_0, k)
-        psi_append_neg = momentum_space_gaussian(a, k_0, -k)
-        if state%2 == 0:
-            amplitudes.append(1j*(psi_append_pos-psi_append_neg))
-        else:
-            amplitudes.append(psi_append_pos + psi_append_neg)
-
-    if (0 in state_range) and which == "neumann":
-        amplitudes[state_range.index(0)] = np.sqrt(2)*momentum_space_gaussian(a, k_0, 0)
-
-    
-    return [states, amplitudes]
-
-
-fps = 20
-time = 50
-speed = 0.01
 
 case = "neumann"
 L = np.pi
@@ -55,17 +25,12 @@ l_0 = 100
 k_0 = l_0*np.pi/L
 k_range = 15
 
-if case == "neumann":
-    gamma = 0.000001
-    gaussian_proj = project_gaussian(L, a, l_0, k_range, "neumann")
-elif case == "dirichlet":
-    gamma = 100000
-    gaussian_proj = project_gaussian(L, a, l_0, k_range, "dirichlet")
+fps = 20
+speed = 0.05
+real_time = 4*m*L**2/np.pi
+time = 10
 
-states = gaussian_proj[0]
-amplitudes = gaussian_proj[1]
-
-myState = pib.Particle_in_Box_State(gamma, L, m, states, amplitudes)
+myState = special.Bouncing_Gaussian(case, L, m, l_0, k_range, a)
 
 # Create Animations
 x = np.arange(-L/2, L/2+0.01, 0.01)
