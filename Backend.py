@@ -171,8 +171,9 @@ class l_to_kl_mapper:
 
 
 class Energy_State_Projector(ABC):
-    def __init__(self, L: float, l_to_k_mapper_ref: l_to_kl_mapper) -> None:
+    def __init__(self, L: float, gamma: float, l_to_k_mapper_ref: l_to_kl_mapper) -> None:
         self._L = L
+        self._gamma = gamma
         self._l_kl_map = l_to_k_mapper_ref
     
     @abstractmethod
@@ -181,11 +182,15 @@ class Energy_State_Projector(ABC):
 
     def set_L(self, L: float) -> None:
         self._L = L
+    
+    def set_gamma(self, gamma: float) -> None:
+        self._gamma = gamma
 
 
 class Energy_State_Matrix_Elements(ABC):
-    def __init__(self, L: float, l_to_k_mapper_ref: l_to_kl_mapper) -> None:
+    def __init__(self, L: float, gamma: float, l_to_k_mapper_ref: l_to_kl_mapper) -> None:
         self._L = L
+        self._gamma = gamma
         self._l_kl_map = l_to_k_mapper_ref
 
     @abstractmethod
@@ -195,6 +200,9 @@ class Energy_State_Matrix_Elements(ABC):
     def set_L(self, L: float) -> None:
         self._L = L 
 
+    def set_gamma(self, gamma: float) -> None:
+        self._gamma = gamma
+
 
 class Gamma_to_k_Base(ABC):
     def __init__(self, L: float) -> None:
@@ -202,12 +210,6 @@ class Gamma_to_k_Base(ABC):
 
     @abstractmethod
     def __call__(self, l: int) -> complex:
-        pass
-    
-    def set_eps(self, eps: float) -> None:
-        pass
-
-    def set_gamma(self, gamma: float) -> None:
         pass
 
     def set_L(self, L: float) -> None:

@@ -1,5 +1,6 @@
 from Backend import *
 import Symmetric_Case as symmetric
+import gamma_minus_is_minus_gamma_plus as anti_sym_bounds
 
 class State_Properties:
     def __init__(self, case: str, gamma: float, L: float, m: float) -> None:
@@ -19,10 +20,17 @@ class State_Properties:
     def switch_case(self, case: str):
         if case == "symmetric":
             self.gamma_to_k_projector = symmetric.Gamma_to_k(self._L, self._gamma)
-            self.energy_state_x_space_projector = symmetric.X_Space_Projector(self._L, self._l_kl_map)
-            self.energy_state_k_space_projector = symmetric.K_Space_Projector(self._L, self._l_kl_map)
-            self.energy_state_x_matrix_elements = symmetric.Bra_l1_x_Ket_l2(self._L, self._l_kl_map)
-            self.energy_state_k_matrix_elements = symmetric.Bra_l1_pR_Ket_l2(self._L, self._l_kl_map)
+            self.energy_state_x_space_projector = symmetric.X_Space_Projector(self._L, self._gamma, self._l_kl_map)
+            self.energy_state_k_space_projector = symmetric.K_Space_Projector(self._L, self._gamma, self._l_kl_map)
+            self.energy_state_x_matrix_elements = symmetric.Bra_l1_x_Ket_l2(self._L, self._gamma, self._l_kl_map)
+            self.energy_state_k_matrix_elements = symmetric.Bra_l1_pR_Ket_l2(self._L, self._gamma, self._l_kl_map)
+
+        elif case == "anti_sym_bounds":
+            self.gamma_to_k_projector = anti_sym_bounds.Gamma_to_k(self._L, self._gamma)
+            self.energy_state_x_space_projector = anti_sym_bounds.X_Space_Projector(self._L, self._gamma, self._l_kl_map)
+            self.energy_state_k_space_projector = anti_sym_bounds.K_Space_Projector(self._L, self._gamma, self._l_kl_map)
+            self.energy_state_x_matrix_elements = anti_sym_bounds.Bra_l1_x_Ket_l2(self._L, self._gamma, self._l_kl_map)
+            self.energy_state_k_matrix_elements = anti_sym_bounds.Bra_l1_pR_Ket_l2(self._L, self._gamma, self._l_kl_map)
 
     @property
     def case(self) -> str:
@@ -33,9 +41,13 @@ class State_Properties:
         return self._gamma
 
     @gamma.setter
-    def gamma(self, newgamma) -> None:
-        self._gamma = newgamma
-        self.gamma_to_k_projector.set_gamma(newgamma)
+    def gamma(self, new_gamma) -> None:
+        self._gamma = new_gamma
+        self.gamma_to_k_projector.set_gamma(new_gamma)
+        self.energy_state_x_space_projector.set_gamma(new_gamma)
+        self.energy_state_k_space_projector.set_gamma(new_gamma)
+        self.energy_state_x_matrix_elements.set_gamma(new_gamma)
+        self.energy_state_k_matrix_elements.set_gamma(new_gamma)
         
     @property
     def L(self) -> float:

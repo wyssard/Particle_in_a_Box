@@ -69,8 +69,8 @@ def gamma_to_k(gamma, l, L):
 
 
 class X_Space_Projector(Energy_State_Projector):
-    def __init__(self, L: float, l_kl_map: l_to_kl_mapper):
-        Energy_State_Projector.__init__(self, L, l_kl_map)
+    def __init__(self, L: float, gamma: float, l_to_k_mapper_ref: l_to_kl_mapper):
+        Energy_State_Projector.__init__(self, L, gamma, l_to_k_mapper_ref)
 
     def get_projection(self, l: int) -> Function_of_array:
         L = self._L
@@ -89,8 +89,8 @@ class X_Space_Projector(Energy_State_Projector):
                 return Function_of_array(lambda x: np.sqrt(2/L)*np.power(1+np.sinh(kappal*L)/(kappal*L), -1/2)*np.cosh(kappal*x))
 
 class K_Space_Projector(Energy_State_Projector):
-    def __init__(self, L: float, l_kl_map: l_to_kl_mapper):
-        Energy_State_Projector.__init__(self, L, l_kl_map)
+    def __init__(self, L: float, gamma: float, l_to_k_mapper_ref: l_to_kl_mapper):
+        Energy_State_Projector.__init__(self, L, gamma, l_to_k_mapper_ref)
 
     def get_projection(self, l: int) -> Function_of_array:
         L = self._L
@@ -111,8 +111,8 @@ class K_Space_Projector(Energy_State_Projector):
 
 
 class Bra_l1_x_Ket_l2(Energy_State_Matrix_Elements):
-    def __init__(self, L: float, l_to_k_mapper_ref: l_to_kl_mapper) -> None:
-        super().__init__(L, l_to_k_mapper_ref)
+    def __init__(self, L: float, gamma: float, l_to_k_mapper_ref: l_to_kl_mapper) -> None:
+        super().__init__(L, gamma, l_to_k_mapper_ref)
 
     def get_matrix_element(self, lhs_state: int, rhs_state: int) -> complex:
         #print("computing x matrix element...")
@@ -158,8 +158,8 @@ class Bra_l1_x_Ket_l2(Energy_State_Matrix_Elements):
                 return (cosh_expr + 2*sinh_expr)/norm_expr*L
 
 class Bra_l1_pR_Ket_l2(Energy_State_Matrix_Elements):
-    def __init__(self, L: float, l_to_k_mapper_ref: l_to_kl_mapper) -> None:
-        super().__init__(L, l_to_k_mapper_ref)
+    def __init__(self, L: float, gamma: float, l_to_k_mapper_ref: l_to_kl_mapper) -> None:
+        super().__init__(L, gamma, l_to_k_mapper_ref)
 
     def get_matrix_element(self, lhs_state: int, rhs_state: int) -> complex:
         #print("computing p matrix element...")
