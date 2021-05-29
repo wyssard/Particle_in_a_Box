@@ -1,6 +1,6 @@
 from Backend import *
-import Symmetric_Case as symmetric
-import gamma_minus_is_minus_gamma_plus as anti_sym_bounds
+import Symmetric_Boundaries as symmetric
+import Anit_Symmetric_Boundaries as anti_symmetric
 
 class State_Properties:
     def __init__(self, case: str, gamma: float, L: float, m: float) -> None:
@@ -15,26 +15,31 @@ class State_Properties:
 
         self._case = case
         self.switch_case(case)
-   
-        
+
+         
     def switch_case(self, case: str):
         if case == "symmetric":
-            self.gamma_to_k_projector = symmetric.Gamma_to_k(self._L, self._gamma)
-            self.energy_state_x_space_projector = symmetric.X_Space_Projector(self._L, self._gamma, self._l_kl_map)
-            self.energy_state_k_space_projector = symmetric.K_Space_Projector(self._L, self._gamma, self._l_kl_map)
-            self.energy_state_x_matrix_elements = symmetric.Bra_l1_x_Ket_l2(self._L, self._gamma, self._l_kl_map)
-            self.energy_state_k_matrix_elements = symmetric.Bra_l1_pR_Ket_l2(self._L, self._gamma, self._l_kl_map)
+            self._boudary_lib = symmetric.Symmetric_Boundary(self._L, self._gamma, self._l_kl_map)
 
-        elif case == "anti_sym_bounds":
-            self.gamma_to_k_projector = anti_sym_bounds.Gamma_to_k(self._L, self._gamma)
-            self.energy_state_x_space_projector = anti_sym_bounds.X_Space_Projector(self._L, self._gamma, self._l_kl_map)
-            self.energy_state_k_space_projector = anti_sym_bounds.K_Space_Projector(self._L, self._gamma, self._l_kl_map)
-            self.energy_state_x_matrix_elements = anti_sym_bounds.Bra_l1_x_Ket_l2(self._L, self._gamma, self._l_kl_map)
-            self.energy_state_k_matrix_elements = anti_sym_bounds.Bra_l1_pR_Ket_l2(self._L, self._gamma, self._l_kl_map)
+        elif case == "anti_symmetric":
+            self._boudary_lib = anti_symmetric.Anti_Symmetric_Boundary(self._L, self._gamma, self._l_kl_map)
+
+        self.gamma_to_k_projector = self._boudary_lib.Gamma_to_k
+        self.energy_state_x_space_projector = self._boudary_lib.X_Space_Projector
+        self.energy_state_k_space_projector = self._boudary_lib.K_Space_Projector
+        self.energy_state_x_matrix_elements = self._boudary_lib.Bra_l1_x_Ket_l2
+        self.energy_state_k_matrix_elements = self._boudary_lib.Bra_l1_pR_Ket_l2
+
 
     @property
     def case(self) -> str:
         return self.case
+
+    @case.setter
+    def case(self, new_case: str) -> None:
+        self._case = new_case
+        self.switch_case(new_case)
+
 
     @property
     def gamma(self) -> float:
@@ -43,11 +48,7 @@ class State_Properties:
     @gamma.setter
     def gamma(self, new_gamma) -> None:
         self._gamma = new_gamma
-        self.gamma_to_k_projector.set_gamma(new_gamma)
-        self.energy_state_x_space_projector.set_gamma(new_gamma)
-        self.energy_state_k_space_projector.set_gamma(new_gamma)
-        self.energy_state_x_matrix_elements.set_gamma(new_gamma)
-        self.energy_state_k_matrix_elements.set_gamma(new_gamma)
+        self._boudary_lib.set_gamma(new_gamma)
         
     @property
     def L(self) -> float:
@@ -56,12 +57,7 @@ class State_Properties:
     @L.setter
     def L(self, new_L) -> None:
         self._L = new_L
-        self.gamma_to_k_projector.set_L(new_L)
-        self.energy_state_x_space_projector.set_L(new_L)
-        self.energy_state_k_space_projector.set_L(new_L)
-        self.energy_state_x_matrix_elements.set_L(new_L)
-        self.energy_state_k_matrix_elements.set_L(new_L)
-
+        self._boudary_lib.set_L(new_L)
 
     @property
     def m(self) -> float:
@@ -235,11 +231,11 @@ class Particle_in_Box_State:
 
     def full_projection_recompute(self) -> None:
         ##print("Recomputing every property that depends on L or gamma...")
-        self._conversion_factor_k_to_new_k = np.sqrt(np.pi/self._sp.L)
 
         for l in range(self._sp.num_energy_states):
             state = self._sp.energy_states[l]
             k_kappa = self._sp.gamma_to_k_projector(state)
+
             self._sp.k_kappa_l[l] = k_kappa
 
             energy = np.real(k_kappa**2)/(2*self._sp.m)
@@ -352,6 +348,8 @@ class Particle_in_Box_State:
     @L.setter
     def L(self, new_L: float) -> None:
         self._sp.L = new_L
+        self._conversion_factor_k_to_new_k = np.sqrt(np.pi/new_L)
+
         self.full_projection_recompute()
 
     @property
@@ -381,4 +379,13 @@ class Particle_in_Box_State:
         self._ksp.recombine(self._esp)
         self._xsp.recombine(self._esp)
         self._new_ksp.recombine(self._esp)
+
+    @property
+    def case(self) -> str:
+        return self._sp.case
+
+    @case.setter
+    def case(self, new_case: str) -> None:
+        self._sp.case = new_case
+        self.full_projection_recompute()
     

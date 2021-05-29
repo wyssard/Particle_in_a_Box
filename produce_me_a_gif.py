@@ -17,7 +17,7 @@ plt.rcParams["animation.html"] = "jshtml"
 plt.rcParams['animation.ffmpeg_path'] = 'C:\\ffmpeg\\bin\\ffmpeg.exe'
 
 
-case = "neumann"
+case = "dirichlet"
 L = np.pi
 m = 1
 a = L/10
@@ -27,13 +27,13 @@ k_range = 15
 
 fps = 20
 speed = 0.05
-real_time = 4*m*L**2/np.pi
-time = 10
+real_time = (4*m*L**2/np.pi)/2
+time = real_time/speed
 
 myState = special.Bouncing_Gaussian(case, L, m, l_0, k_range, a)
 
 # Create Animations
-x = np.arange(-L/2, L/2+0.01, 0.01)
+x = np.linspace(-L/2, L/2, 300, endpoint=True)
 kb = k_0+15
 k = np.arange(-kb, kb+0.01, 0.01)
 kn = np.arange(-kb, kb+1, 1)

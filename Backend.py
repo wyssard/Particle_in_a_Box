@@ -2,7 +2,7 @@ from __future__ import annotations
 from typing import List
 from typing import Callable
 import numpy as np
-from abc import ABC, abstractmethod
+from abc import ABC, abstractmethod, abstractproperty
 
 class Function_Base(ABC):
     def __init__(self, function: Callable):
@@ -214,3 +214,45 @@ class Gamma_to_k_Base(ABC):
 
     def set_L(self, L: float) -> None:
         self._L = L
+
+
+class Boundary(ABC):
+    def __init__(self, L: float, gamma: float, l_to_kl_mapper_ref: l_to_kl_mapper) -> None:
+        pass
+
+    @abstractproperty
+    def X_Space_Projector(self) -> Energy_State_Projector:
+        pass
+
+    @abstractproperty
+    def K_Space_Projector(self) -> Energy_State_Projector:
+        pass
+
+    @abstractproperty
+    def Bra_l1_x_Ket_l2(self) -> Energy_State_Matrix_Elements:
+        pass
+
+    @abstractproperty
+    def Bra_l1_pR_Ket_l2(self) -> Energy_State_Matrix_Elements:
+        pass
+
+    @abstractproperty
+    def Gamma_to_k(self) -> Gamma_to_k_Base:
+        pass
+    
+    def set_L(self, L: float) -> None:
+        self.X_Space_Projector.set_L(L)
+        self.K_Space_Projector.set_L(L)
+        self.Bra_l1_pR_Ket_l2.set_L(L)
+        self.Bra_l1_x_Ket_l2.set_L(L)
+        self.Gamma_to_k.set_L(L)
+    
+
+    def set_gamma(self, gamma: float) -> None:
+        self.X_Space_Projector.set_gamma(gamma)
+        self.K_Space_Projector.set_gamma(gamma)
+        self.Bra_l1_pR_Ket_l2.set_gamma(gamma)
+        self.Bra_l1_x_Ket_l2.set_gamma(gamma)
+        self.Gamma_to_k.set_gamma(gamma)
+
+    
