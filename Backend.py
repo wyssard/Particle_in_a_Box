@@ -247,6 +247,7 @@ class New_Style_Boundary(ABC):
         pass
 
     def set_L(self, new_L: float) -> None:
+        print("setting L...(backend)")
         self._L = new_L
 
     def set_gamma(self, new_gamma: float) -> None:

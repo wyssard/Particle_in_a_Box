@@ -137,7 +137,6 @@ class Bra_l1_pR_Ket_l2(Energy_State_Matrix_Elements):
             return 2j/L*(-1)**((lhs_state+rhs_state-1)/2)*(lhs_state**2 + rhs_state**2)/(lhs_state**2 - rhs_state**2)
             
 
-
 class Neumann_Boundary(Boundary):
     def __init__(self, L: float, gamma: float, l_to_kl_mapper_ref: l_to_kl_mapper) -> None:
         pass

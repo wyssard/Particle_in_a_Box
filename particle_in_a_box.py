@@ -1,6 +1,5 @@
 from Backend import *
-import Symmetric_Boundaries as symmetric
-import Anit_Symmetric_Boundaries as anti_symmetric
+import Boundaries
 
 class State_Properties:
     def __init__(self, case: str, gamma: float, L: float, m: float) -> None:
@@ -19,27 +18,23 @@ class State_Properties:
          
     def switch_case(self, case: str):
         if case == "symmetric":
-            self._boudary_lib = symmetric.Symmetric_Boundary(self._L, self._gamma, self._l_kl_map)
-
-        elif case == "anti_symmetric":
-            self._boudary_lib = anti_symmetric.Anti_Symmetric_Boundary(self._L, self._gamma, self._l_kl_map)
-
-        self.gamma_to_k_projector = self._boudary_lib.Gamma_to_k
-        self.energy_state_x_space_projector = self._boudary_lib.X_Space_Projector
-        self.energy_state_k_space_projector = self._boudary_lib.K_Space_Projector
-        self.energy_state_x_matrix_elements = self._boudary_lib.Bra_l1_x_Ket_l2
-        self.energy_state_k_matrix_elements = self._boudary_lib.Bra_l1_pR_Ket_l2
-
+            self._boudary_lib = Boundaries.New_Symmetric_Boundary(self._L, self._gamma, self._l_kl_map)
+        
+        elif case == "neumann":
+            self._boudary_lib = Boundaries.New_Neumann_Boudnary(self._L, self._gamma, self._l_kl_map)
 
     @property
     def case(self) -> str:
-        return self.case
+        return self._case
 
     @case.setter
     def case(self, new_case: str) -> None:
         self._case = new_case
         self.switch_case(new_case)
 
+    @property
+    def boundary_lib(self) -> New_Style_Boundary:
+        return self._boudary_lib
 
     @property
     def gamma(self) -> float:
@@ -56,6 +51,7 @@ class State_Properties:
 
     @L.setter
     def L(self, new_L) -> None:
+        print("setting L...(state_properties)")
         self._L = new_L
         self._boudary_lib.set_L(new_L)
 
@@ -160,7 +156,7 @@ class Momentum_Space_Projection:
                     coeff = complex(np.conj(lh_coeff)*rh_coeff)
                     wiggler = Wiggle_Factor(-lh_energy+rh_energy)
 
-                    exp_val_component = self._sp.energy_state_k_matrix_elements.get_matrix_element(lh_state, rh_state)
+                    exp_val_component = self._sp.boundary_lib.get_pR_matrix_element(lh_state, rh_state)
 
                     self._expectation_value += (coeff*wiggler*exp_val_component).get_real_part()
 
@@ -200,7 +196,7 @@ class Position_Space_Projection:
 
                     wiggler = Wiggle_Factor(rh_energy-lh_energy)
 
-                    exp_val_component = self._sp.energy_state_x_matrix_elements.get_matrix_element(lh_state, rh_state) 
+                    exp_val_component = self._sp.boundary_lib.get_x_matrix_element(lh_state, rh_state) 
                     coeff = complex(np.conj(lh_coeff)*rh_coeff)
                     append = coeff*wiggler
 
@@ -208,10 +204,8 @@ class Position_Space_Projection:
                     self._exp_t_deriv += (2j*(lh_energy-rh_energy)*append*exp_val_component).get_real_part()
 
 class Particle_in_Box_State:
-    def __init__(self, case: str, gamma: float, L: float, m: float, energy_states: list, amplitudes: np.ndarray) -> None:
+    def __init__(self, case: str, L: float, m: float, energy_states: list, amplitudes: np.ndarray, gamma=None) -> None:
         self._sp = State_Properties(case, gamma, L, m)
-
-        self._conversion_factor_k_to_new_k = np.sqrt(np.pi/self._sp.L)
 
         self._esp = Energy_Space_Projection([], np.array([]), [], self._sp)
         self._xsp = Position_Space_Projection(None_Function(), [], self._sp)
@@ -234,7 +228,7 @@ class Particle_in_Box_State:
 
         for l in range(self._sp.num_energy_states):
             state = self._sp.energy_states[l]
-            k_kappa = self._sp.gamma_to_k_projector(state)
+            k_kappa = self._sp.boundary_lib.get_kl(state)
 
             self._sp.k_kappa_l[l] = k_kappa
 
@@ -242,11 +236,12 @@ class Particle_in_Box_State:
             self._esp._energies[l] = energy
             self._esp._wiggle_factors[l] = Wiggle_Factor(energy)
 
-            k_proj = self._sp.energy_state_k_space_projector.get_projection(state)
-            x_proj = self._sp.energy_state_x_space_projector.get_projection(state)
+            k_proj = self._sp.boundary_lib.get_k_space_projection(state)
+            x_proj = self._sp.boundary_lib.get_x_space_projection(state)
+            new_k_proj = self._sp.boundary_lib.get_new_k_space_projection(state)
             self._xsp._x_space_single_energy_proj[l] = x_proj
             self._ksp._cont_k_space_single_energy_proj[l] = k_proj
-            self._new_ksp._new_k_space_single_energy_proj[l] = self._conversion_factor_k_to_new_k*k_proj
+            self._new_ksp._new_k_space_single_energy_proj[l] = new_k_proj
 
         self.compute_expectation_values()
         self._ksp.recombine(self._esp)
@@ -268,19 +263,20 @@ class Particle_in_Box_State:
 
         for state in the_states:
             self._sp.energy_states.append(state)
-            k_kappa_to_append = self._sp.gamma_to_k_projector(state)
+            k_kappa_to_append = self._sp.boundary_lib.get_kl(state)
             self._sp.k_kappa_l.append(k_kappa_to_append)
 
             energy_to_append = np.real(k_kappa_to_append**2)/(2*self._sp.m)
             self._esp._energies.append(energy_to_append)
             self._esp._wiggle_factors.append(Wiggle_Factor(energy_to_append))
 
-            k_proj_append = self._sp.energy_state_k_space_projector.get_projection(state)
-            x_proj_append = self._sp.energy_state_x_space_projector.get_projection(state)
+            k_proj_append = self._sp.boundary_lib.get_k_space_projection(state)
+            x_proj_append = self._sp.boundary_lib.get_x_space_projection(state)
+            new_k_proj_append = self._sp.boundary_lib.get_new_k_space_projection(state)
 
             self._xsp._x_space_single_energy_proj.append(x_proj_append)
             self._ksp._cont_k_space_single_energy_proj.append(k_proj_append)
-            self._new_ksp._new_k_space_single_energy_proj.append(self._conversion_factor_k_to_new_k*k_proj_append)
+            self._new_ksp._new_k_space_single_energy_proj.append(new_k_proj_append)
         
         self.compute_expectation_values()
         
@@ -347,9 +343,8 @@ class Particle_in_Box_State:
 
     @L.setter
     def L(self, new_L: float) -> None:
+        print("setting L...(particle_in_a_box)")
         self._sp.L = new_L
-        self._conversion_factor_k_to_new_k = np.sqrt(np.pi/new_L)
-
         self.full_projection_recompute()
 
     @property
@@ -359,7 +354,6 @@ class Particle_in_Box_State:
     @gamma.setter
     def gamma(self, new_gamma: float) -> None:
         self._sp.gamma = new_gamma
-        
         self.full_projection_recompute()
 
     @property
