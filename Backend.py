@@ -216,6 +216,43 @@ class Gamma_to_k_Base(ABC):
         self._L = L
 
 
+class New_Style_Boundary(ABC):
+    def __init__(self, L: float, gamma: float, l_to_kl_mapper_ref: l_to_kl_mapper) -> None:
+        self._L = L
+        self._gamma = gamma
+        self._l_kl_map = l_to_kl_mapper_ref
+    
+    @abstractmethod
+    def get_kl(self, l: int) -> complex:
+        pass
+
+    @abstractmethod
+    def get_x_space_projection(self, l: int) -> Function_of_array:
+        pass
+
+    @abstractmethod
+    def get_k_space_projection(self, l: int) -> Function_of_array:
+        pass
+
+    @abstractmethod
+    def get_new_k_space_projection(self, l: int) -> Function_of_array:
+        pass
+
+    @abstractmethod
+    def get_x_matrix_element(self, lhs_state: int, rhs_state: int) -> complex:
+        pass
+
+    @abstractmethod
+    def get_pR_matrix_element(self, lhs_state: int, rhs_state: int) -> complex:
+        pass
+
+    def set_L(self, new_L: float) -> None:
+        self._L = new_L
+
+    def set_gamma(self, new_gamma: float) -> None:
+        self._gamma = new_gamma
+
+
 class Boundary(ABC):
     def __init__(self, L: float, gamma: float, l_to_kl_mapper_ref: l_to_kl_mapper) -> None:
         pass

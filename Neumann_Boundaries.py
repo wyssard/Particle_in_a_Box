@@ -95,6 +95,23 @@ class New_K_Space_Projector(Energy_State_Projector):
         return Function_of_array(lambda n: discrete_momentum_projection(l, n))
         
 
+class K_Space_Projector(Energy_State_Projector):
+    def __init__(self, L: float, gamma: float, l_to_k_mapper_ref: l_to_kl_mapper) -> None:
+        super().__init__(L, gamma, l_to_k_mapper_ref)
+
+    def get_projection(self, l: int) -> Function_of_array:
+        L = self._L
+
+        if l == 0:
+            return Function_of_array(lambda k: np.sqrt(2*L/np.pi)*np.sin(k*L/2)/(k*L))
+        
+        if l%2 == 0:
+            return Function_of_array(lambda k: np.sqrt(L/np.pi)*(np.sin(l*np.pi/2 + k*L/2)/(l*np.pi + k*L) + np.sin(l*np.pi/2 - k*L/2)/(l*np.pi - k*L)))
+
+        else:
+            return Function_of_array(lambda k: 1j*np.sqrt(L/np.pi)*(np.sin(l*np.pi/2 + k*L/2)/(l*np.pi + k*L) - np.sin(l*np.pi/2 - k*L/2)/(l*np.pi - k*L)))
+
+
 class Bra_l1_pR_Ket_l2(Energy_State_Matrix_Elements):
     def __init__(self, L: float, gamma: float, l_to_k_mapper_ref: l_to_kl_mapper) -> None:
         super().__init__(L, gamma, l_to_k_mapper_ref)

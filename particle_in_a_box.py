@@ -209,7 +209,7 @@ class Position_Space_Projection:
 
 class Particle_in_Box_State:
     def __init__(self, case: str, gamma: float, L: float, m: float, energy_states: list, amplitudes: np.ndarray) -> None:
-        self._sp = State_Properties(case, gamma, L , m)
+        self._sp = State_Properties(case, gamma, L, m)
 
         self._conversion_factor_k_to_new_k = np.sqrt(np.pi/self._sp.L)
 
@@ -357,8 +357,8 @@ class Particle_in_Box_State:
         return self._sp.gamma
 
     @gamma.setter
-    def gamma(self, newgamma: float) -> None:
-        self._sp.gamma = newgamma
+    def gamma(self, new_gamma: float) -> None:
+        self._sp.gamma = new_gamma
         
         self.full_projection_recompute()
 
