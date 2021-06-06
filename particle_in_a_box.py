@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from Backend import *
 import Boundaries
 
@@ -22,6 +24,16 @@ class State_Properties:
         
         elif case == "neumann":
             self._boudary_lib = Boundaries.New_Neumann_Boudnary(self._L, self._gamma, self._l_kl_map)
+
+        elif case == "dirichlet":
+            self._boudary_lib = Boundaries.Dirichlet_Boundary(self._L, self._gamma, self._l_kl_map)
+
+        elif case == "dirichlet_neumann":
+            self._boudary_lib = Boundaries.Dirichlet_Neumann_Boundary(self._L, self._gamma, self._l_kl_map)
+
+        elif case == "anit_symmetric":
+            # wait for Jan to give more analytic results
+            pass
 
     @property
     def case(self) -> str:
@@ -82,7 +94,7 @@ class State_Properties:
     @property
     def l_kl_map(self) -> l_to_kl_mapper:
         return self._l_kl_map
-    
+  
 class Energy_Space_Projection:
     def __init__(self, energies: list, energy_proj_coeffs: np.ndarray, wiggle_factors: List[Wiggle_Factor], state_properties: State_Properties) -> None:
         self._energies = energies
@@ -92,6 +104,11 @@ class Energy_Space_Projection:
         self._Norm = 0
         self._exp_value = 0
         
+    @staticmethod
+    def empty_init(state_props: State_Properties) -> Energy_Space_Projection:
+        return Energy_Space_Projection([], np.array([]), [], state_props)
+
+
     def normalize(self) -> None:
         if self._sp.num_energy_states == 0:
             self._Norm = 0
@@ -115,7 +132,11 @@ class New_Momentum_Space_Projection:
         self._new_k_space_wavefunction = new_k_space_wavefunction
         self._new_k_space_single_energy_proj = new_k_space_single_energy_proj
         self._sp = state_properties
-    
+
+    @staticmethod
+    def empty_init(state_props: State_Properties) -> New_Momentum_Space_Projection:
+        return New_Momentum_Space_Projection(None_Function(), [], state_props)
+
     def recombine(self, energy_space_proj: Energy_Space_Projection) -> None:
         self._new_k_space_wavefunction = None_Function()
         temp_proj_coeff = energy_space_proj._energy_proj_coeffs
@@ -129,6 +150,9 @@ class Momentum_Space_Projection:
         self._cont_k_space_single_energy_proj = cont_k_space_single_energy_proj
         self._sp = state_properties
         self._expectation_value = None_Function()
+
+    def empty_init(state_props: State_Properties) -> Momentum_Space_Projection:
+        return Momentum_Space_Projection(None_Function(), [], state_props)
     
     def recombine(self, energy_space_proj: Energy_Space_Projection) -> None:
         self._cont_k_space_wavefunction = None_Function()
@@ -167,6 +191,10 @@ class Position_Space_Projection:
         self._sp = state_properties
         self._expectation_value = None_Function()
         self._exp_t_deriv = None_Function()
+
+    @staticmethod
+    def empty_init(state_props: State_Properties) -> Position_Space_Projection:
+        return Position_Space_Projection(None_Function(), [], state_props)
 
     def recombine(self, energy_space_proj: Energy_Space_Projection) -> None:
         self._x_space_wavefunction = None_Function()
@@ -207,12 +235,16 @@ class Particle_in_Box_State:
     def __init__(self, case: str, L: float, m: float, energy_states: list, amplitudes: np.ndarray, gamma=None) -> None:
         self._sp = State_Properties(case, gamma, L, m)
 
-        self._esp = Energy_Space_Projection([], np.array([]), [], self._sp)
-        self._xsp = Position_Space_Projection(None_Function(), [], self._sp)
-        self._ksp = Momentum_Space_Projection(None_Function(), [], self._sp)
-        self._new_ksp = New_Momentum_Space_Projection(None_Function(), [], self._sp)
+        self._esp = Energy_Space_Projection.empty_init(self._sp)
+        self._xsp = Position_Space_Projection.empty_init(self._sp)
+        self._ksp = Momentum_Space_Projection.empty_init(self._sp)
+        self._new_ksp = New_Momentum_Space_Projection.empty_init(self._sp)
 
         self.add_state(energy_states, amplitudes)
+
+    @staticmethod
+    def empty_init(case: str, L: float, m: float) -> Particle_in_Box_State:
+        return Particle_in_Box_State(case, L, m, [], [])
 
     def change_energy_proj_coeff(self, the_state: int, the_coeff: complex) -> None:
         self._esp.change_coeff(the_state, the_coeff)

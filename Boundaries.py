@@ -1,8 +1,5 @@
 from __future__ import annotations
 
-from numpy import isnan, sign
-from numpy.lib.arraysetops import isin
-
 from Backend import *
 from scipy.optimize import fsolve
 from scipy.optimize import brentq
@@ -367,7 +364,7 @@ class Dirichlet_Boundary(New_Style_Boundary):
         sign_factor = (-1)**l
         return Function_of_array(lambda k: i_factor(l)*np.sqrt(L/2)*(np.sin((l+1)*np.pi/2 + k*L/2)/((l+1)*np.pi + k*L) + sign_factor(l)*np.sin((l+1)*np.pi/2 - k*L/2)/((l+1)*np.pi - k*L)))
 
-    def discrete_momentum_projection_helper(slef, l: int, n_array: np.ndarray) -> np.ndarray:
+    def discrete_momentum_projection_helper(self, l: int, n_array: np.ndarray) -> np.ndarray:
         if isinstance(n_array, int):
             n_array = [n_array]
         
@@ -399,7 +396,69 @@ class Dirichlet_Boundary(New_Style_Boundary):
         return Function_of_array(lambda n: self.discrete_momentum_projection_helper(l, n))
 
 
-class Neumann_Dirichlet_Boundary(New_Style_Boundary):
+class Dirichlet_Neumann_Boundary(New_Style_Boundary):
     def __init__(self, L: float, gamma: float, l_to_kl_mapper_ref: l_to_kl_mapper) -> None:
         super().__init__(L, gamma, l_to_kl_mapper_ref)
 
+    
+    def get_kl(self, l: int) -> complex:
+        return (2*l+1)/2*np.pi/self._L
+    
+
+    def get_x_space_projection(self, l: int) -> Function_of_array:
+        L = self._L
+        kl = self._l_kl_map(l)
+        return Function_of_array(lambda x: np.sqrt(2/L)*np.sin(kl*(x+L/2)))
+
+    def get_k_space_projection(self, l: int) -> Function_of_array:
+        L = self._L
+        kl = self._l_kl_map(l)
+        lhs_term = Function_of_array(lambda k: np.sin((kl+k)*L/2)/((kl+k)*L)*np.exp(-1j*(2*l+1)*np.pi/4))
+        rhs_term = Function_of_array(lambda k: np.sin((kl-k)*L/2)/((kl-k)*L)*np.exp(1j*(2*l+1)*np.pi/4))
+        return 1j*np.sqrt(L/np.pi)*(lhs_term - rhs_term)
+
+    
+    def discrete_momentum_projection_helper(self, l: int, n_array: np.ndarray) -> np.ndarray:
+        if isinstance(n_array, int):
+            n_array = [n_array]
+        
+        projection_coefficients = []
+
+        for n in n_array:
+            if n == l:
+                coeff_append = 1j/np.pi*(-1)**(l)*np.exp(-1j*(2*l+1)*np.pi/4)/(2*l+1) - 1j/2*np.exp(1j*(2*l+1)*np.pi/4)
+            
+            elif l+n == -1:
+                coeff_append = 1j/2*np.exp(-1j*(2*l+1)*np.pi/4) - 1j/np.pi*(-1)**(l)*np.exp(1j*(2*l+1)*np.pi/4)/(2*l+1)
+
+            elif (n+l)%2 == 0:
+                coeff_append = 1j/np.pi*(-1)**((l+n)/2)*np.exp(-1j*(2*l+1)*np.pi/4)/(l+n+1)
+            
+            elif (n+l)%2 == 1:
+                coeff_append = -1j/np.pi*(-1)**((l-n-1)/2)*np.exp(1j*(2*l+1)*np.pi/4)/(l-n)
+
+            projection_coefficients.append(coeff_append)
+        
+        return np.array(projection_coefficients)
+
+
+    def get_new_k_space_projection(self, l: int) -> Function_of_array:
+        return Function_of_array(lambda n: self.discrete_momentum_projection_helper(l, n))
+
+    
+    def get_x_matrix_element(self, lhs_state: int, rhs_state: int) -> complex:
+        L = self._L
+       
+        if lhs_state%2 == rhs_state%2:
+            return (2*L/np.pi**2)/(lhs_state+rhs_state+1)**2
+        else:
+            return -(2*L/np.pi**2)/(lhs_state-rhs_state)**2
+
+    
+    def get_pR_matrix_element(self, lhs_state: int, rhs_state: int) -> complex:
+        L = self._L
+
+        if lhs_state%2 == rhs_state%2:
+            return 1j/L*(lhs_state-rhs_state)/(lhs_state+rhs_state+1)
+        else:
+            return 1j/L*(lhs_state+rhs_state+1)/(rhs_state-lhs_state)

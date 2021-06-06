@@ -5,7 +5,7 @@ import numpy as np
 from abc import ABC, abstractmethod, abstractproperty
 
 class Function_Base(ABC):
-    def __init__(self, function: Callable):
+    def __init__(self, function: Callable) -> None:
         self._function = function
 
     @abstractmethod
@@ -13,16 +13,21 @@ class Function_Base(ABC):
         pass
 
     @abstractmethod
-    def __add__(self, other):
-        pass
-    
-    @abstractmethod
-    def __mul__(self, other):
+    def __add__(self, other: Function_Base) -> Function_Base:
         pass
 
+    def __neg__(self) -> Function_Base:
+        return self.__mul__(-1)
+
+    def __sub__(self, other: Function_Base) -> Function_Base:
+        return self.__add__((-1)*other)
+
     @abstractmethod
-    def __rmul__(self, other):
+    def __mul__(self, other) -> Function_Base:
         pass
+
+    def __rmul__(self, other) -> Function_Base:
+        return self.__mul__(other)
 
     @abstractmethod
     def get_real_part(self):
@@ -31,6 +36,7 @@ class Function_Base(ABC):
     @abstractmethod
     def get_imag_part(self):
         pass
+
 
 class None_Function(Function_Base):
     def __init__(self):
@@ -43,9 +49,6 @@ class None_Function(Function_Base):
         return other
     
     def __mul__(self):
-        return self
-
-    def __rmul__(self):
         return self
 
     def get_real_part(self):
@@ -74,10 +77,6 @@ class Function_of_t(Function_Base):
         elif isinstance(other, (int, float, complex)):
             return Function_of_t(lambda t: other*self._function(t))
 
-    def __rmul__(self, other):
-        return self.__mul__(other)
-
-
     def get_real_part(self):
         return Function_of_t(lambda t: np.real(self._function(t)))
 
@@ -102,9 +101,6 @@ class Function_of_array(Function_Base):
             return Function_of_array(lambda n: self._function(n)*other._function(n))
         elif isinstance(other, (int, float, complex)):
             return Function_of_array(lambda n: other*self._function(n))
-
-    def __rmul__(self, other):
-        return self.__mul__(other)
 
     def get_real_part(self):
         return Function_of_array(lambda n: np.real(self._function(n)))
@@ -133,9 +129,7 @@ class Function_of_array_and_t(Function_Base):
             return Function_of_array_and_t(lambda x, t: other*self._function(x,t))
         if isinstance(other, Wiggle_Factor):
             return Function_of_array_and_t(lambda x,t: other(t)*self._function(x,t))
-    
-    def __rmul__(self, other):
-        return self.__mul__(other)
+
 
     def get_real_part(self):
         return Function_of_array_and_t(lambda x,t: np.real(self._function(x,t)))
@@ -221,6 +215,7 @@ class New_Style_Boundary(ABC):
         self._L = L
         self._gamma = gamma
         self._l_kl_map = l_to_kl_mapper_ref
+
     
     @abstractmethod
     def get_kl(self, l: int) -> complex:

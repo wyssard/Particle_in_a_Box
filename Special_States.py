@@ -3,10 +3,6 @@ from __future__ import annotations
 from Backend import *
 import particle_in_a_box as pib
 
-# This file would simplify if we implemented new specific Neumann and Dirichlet
-# cases instead of considering them as limiting cases of the general 
-# symmetric case
-
 
 class Momentum_Space_Gaussian:
     def __init__(self, a: float, k_0: float) -> None:
@@ -20,46 +16,46 @@ class Momentum_Space_Gaussian:
 
 class Bouncing_Gaussian(pib.Particle_in_Box_State):
     def find_amplitudes(self) -> None:
-        state_range = range(self._l_0-self._l_range, self._l_0+self._l_range)
-        for l in state_range:
-            self._states.append(l)
-            k = self._gamma_to_k(l)
-            if l%2 == 0:
-                amplitude = self._k_space_gaussian(k) + self._k_space_gaussian(-k)
-            else:
-                amplitude = 1j*(self._k_space_gaussian(k) - self._k_space_gaussian(-k))
+        L = self.L
+        amplitudes_to_add = []
+        l_range = range(self._l_0-self._l_range, self._l_0+self._l_range+1)
 
-            self._amplitudes.append(amplitude)
+        if self.case == "dirichlet":
+            for l in l_range:
+                pos_k_append = self._k_space_gaussian(np.pi/L*(l+1))
+                neg_k_append = self._k_space_gaussian(-np.pi/L*(l+1))
+                if l%2 == 0:
+                    amplitudes_to_add.append(pos_k_append+neg_k_append)
+                else:
+                    amplitudes_to_add.append(1j*(pos_k_append-neg_k_append))
         
-        if (0 in state_range) and self._case == "neumann":
-            index = state_range.index(0)
-            amplitude[index] = np.sqrt(2)*self._k_space_gaussian(0)
+        elif self.case == "neumann":
+            for l in l_range:
+                pos_k_append = self._k_space_gaussian(np.pi/L*l)
+                neg_k_append = self._k_space_gaussian(-np.pi/L*l)
+                if l%2 == 0:
+                    amplitudes_to_add.append(pos_k_append+neg_k_append)
+                else:
+                    amplitudes_to_add.append(1j*(pos_k_append-neg_k_append))
+            
+            if 0 in l_range:
+                i = l_range.index(0)
+                amplitudes_to_add[i] = np.sqrt(2)*self._k_space_gaussian(0)
+
+        elif self.case == "dirichlet_neumann":
+            for l in l_range:
+                pos_k_append = self._k_space_gaussian(np.pi/L*(l+0.5))*np.exp(-1j*(2*l+1)*np.pi/4)
+                neg_k_append = self._k_space_gaussian(-np.pi/L*(l+0.5))*np.exp(1j*(2*l+1)*np.pi/4)
+                amplitudes_to_add.append(1j*(pos_k_append-neg_k_append))
+
+        states_to_add = list(l_range)
+        self.add_state(states_to_add, amplitudes_to_add)
 
 
     def __init__(self, case: str, L: float, m: float, l_0: int, l_range: int, a: float) -> None:
-        self._case = case    
-        self._states = []
-        self._amplitudes = []
+        super().__init__(case, L, m, [], [])
         self._l_0 = l_0
         self._l_range = l_range
-        self._L = L
-
-        self.switch_case()
+        self._k_0 = self._sp.boundary_lib.get_kl(l_0)
         self._k_space_gaussian = Momentum_Space_Gaussian(a, self._k_0)
-        self._gamma_to_k = pib.symmetric.Gamma_to_k(self._L, self._gamma)
-        self._k_0_alt = self._gamma_to_k(l_0)
-
-        print("k_0: ", self._k_0)
-        print("k_0_alt: ", self._k_0_alt)
-
         self.find_amplitudes()
-        super().__init__("symmetric", self._gamma, L, m, self._states, self._amplitudes)
-
-    
-    def switch_case(self) -> None:
-        if self._case == "neumann":
-            self._gamma = 10**(-6)
-            self._k_0 = self._l_0*np.pi/self._L
-        elif self._case == "dirichlet":
-            self._gamma = 10**(6)
-            self._k_0 = (self._l_0+1)*np.pi/self._L
