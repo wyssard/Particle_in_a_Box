@@ -1,4 +1,5 @@
 from __future__ import annotations
+from copy import deepcopy
 
 from Backend import *
 import Boundaries
@@ -20,10 +21,10 @@ class State_Properties:
          
     def switch_case(self, case: str):
         if case == "symmetric":
-            self._boudary_lib = Boundaries.New_Symmetric_Boundary(self._L, self._gamma, self._l_kl_map)
+            self._boudary_lib = Boundaries.Symmetric_Boundary(self._L, self._gamma, self._l_kl_map)
         
         elif case == "neumann":
-            self._boudary_lib = Boundaries.New_Neumann_Boudnary(self._L, self._gamma, self._l_kl_map)
+            self._boudary_lib = Boundaries.Neumann_Boudnary(self._L, self._gamma, self._l_kl_map)
 
         elif case == "dirichlet":
             self._boudary_lib = Boundaries.Dirichlet_Boundary(self._L, self._gamma, self._l_kl_map)
@@ -31,9 +32,8 @@ class State_Properties:
         elif case == "dirichlet_neumann":
             self._boudary_lib = Boundaries.Dirichlet_Neumann_Boundary(self._L, self._gamma, self._l_kl_map)
 
-        elif case == "anit_symmetric":
-            # wait for Jan to give more analytic results
-            pass
+        elif case == "anti_symmetric":
+            self._boudary_lib = Boundaries.Anti_Symmetric_Boundary(self._L, self._gamma, self._l_kl_map)
 
     @property
     def case(self) -> str:
@@ -94,7 +94,7 @@ class State_Properties:
     @property
     def l_kl_map(self) -> l_to_kl_mapper:
         return self._l_kl_map
-  
+
 class Energy_Space_Projection:
     def __init__(self, energies: list, energy_proj_coeffs: np.ndarray, wiggle_factors: List[Wiggle_Factor], state_properties: State_Properties) -> None:
         self._energies = energies
@@ -103,6 +103,7 @@ class Energy_Space_Projection:
         self._sp = state_properties
         self._Norm = 0
         self._exp_value = 0
+        self._energy_space_wavefunc = Energy_Space_Wavefunction(self._energies, self._energy_proj_coeffs)
         
     @staticmethod
     def empty_init(state_props: State_Properties) -> Energy_Space_Projection:
@@ -132,6 +133,7 @@ class New_Momentum_Space_Projection:
         self._new_k_space_wavefunction = new_k_space_wavefunction
         self._new_k_space_single_energy_proj = new_k_space_single_energy_proj
         self._sp = state_properties
+        self._expectation_value = None_Function()
 
     @staticmethod
     def empty_init(state_props: State_Properties) -> New_Momentum_Space_Projection:
@@ -144,12 +146,31 @@ class New_Momentum_Space_Projection:
         for i in range(len(temp_proj_coeff)):
             self._new_k_space_wavefunction += temp_proj_coeff[i]*self._new_k_space_single_energy_proj[i]*temp_wigglers[i]
 
+    def compute_expectation_value(self, energy_space_proj: Energy_Space_Projection) -> None:
+        self._expectation_value = None_Function()
+        
+        for rh_index in range(self._sp.num_energy_states):
+            rh_coeff = energy_space_proj._energy_proj_coeffs[rh_index]
+            rh_state = self._sp.energy_states[rh_index]
+            rh_energy = energy_space_proj._energies[rh_index]
+
+            for lh_index in range(self._sp.num_energy_states):
+                lh_coeff = energy_space_proj._energy_proj_coeffs[lh_index]
+                lh_state = self._sp.energy_states[lh_index]
+                lh_energy = energy_space_proj._energies[lh_index]
+
+                coeff = complex(np.conj(lh_coeff)*rh_coeff)
+                wiggler = Wiggle_Factor(-lh_energy+rh_energy)
+
+                exp_val_component = self._sp.boundary_lib.get_pR_matrix_element(lh_state, rh_state)
+
+                self._expectation_value += (coeff*wiggler*exp_val_component).get_real_part()
+
 class Momentum_Space_Projection:
     def __init__(self, cont_k_space_wavefunction: Function_of_array_and_t, cont_k_space_single_energy_proj: list, state_properties: State_Properties) -> None:
         self._cont_k_space_wavefunction = cont_k_space_wavefunction
         self._cont_k_space_single_energy_proj = cont_k_space_single_energy_proj
         self._sp = state_properties
-        self._expectation_value = None_Function()
 
     def empty_init(state_props: State_Properties) -> Momentum_Space_Projection:
         return Momentum_Space_Projection(None_Function(), [], state_props)
@@ -160,29 +181,6 @@ class Momentum_Space_Projection:
         temp_wigglers = energy_space_proj._wiggle_factors
         for i in range(len(temp_proj_coeff)):
             self._cont_k_space_wavefunction += temp_proj_coeff[i]*self._cont_k_space_single_energy_proj[i]*temp_wigglers[i]
-    
-    def compute_expectation_value(self, energy_space_proj: Energy_Space_Projection) -> None:
-        self._expectation_value = None_Function()
-        if self._sp.num_energy_states == 1:
-            self._expectation_value = Function_of_t(lambda t: np.zeros(np.shape(t)))
-        
-        else:
-            for rh_index in range(self._sp.num_energy_states):
-                rh_coeff = energy_space_proj._energy_proj_coeffs[rh_index]
-                rh_state = self._sp.energy_states[rh_index]
-                rh_energy = energy_space_proj._energies[rh_index]
-
-                for lh_index in range(self._sp.num_energy_states):
-                    lh_coeff = energy_space_proj._energy_proj_coeffs[lh_index]
-                    lh_state = self._sp.energy_states[lh_index]
-                    lh_energy = energy_space_proj._energies[lh_index]
-
-                    coeff = complex(np.conj(lh_coeff)*rh_coeff)
-                    wiggler = Wiggle_Factor(-lh_energy+rh_energy)
-
-                    exp_val_component = self._sp.boundary_lib.get_pR_matrix_element(lh_state, rh_state)
-
-                    self._expectation_value += (coeff*wiggler*exp_val_component).get_real_part()
 
 class Position_Space_Projection:
     def __init__(self, x_space_wavefunction: Function_of_array_and_t, x_space_single_energy_proj: list, state_properties: State_Properties) -> None:
@@ -207,32 +205,35 @@ class Position_Space_Projection:
         self._expectation_value = None_Function()
         self._exp_t_deriv = None_Function()
 
-        if self._sp.num_energy_states == 1:
-            self._expectation_value = Function_of_t(lambda t: np.zeros(np.shape(t)))
-            self._exp_t_deriv = Function_of_t(lambda t: np.zeros(np.shape(t)))
+        for rh_index in range(1, self._sp.num_energy_states):
+            rh_energy = energy_space_proj._energies[rh_index]
+            rh_coeff = energy_space_proj._energy_proj_coeffs[rh_index]
+            rh_state = self._sp.energy_states[rh_index]
 
-        else:
-            for rh_index in range(1, self._sp.num_energy_states):
-                rh_energy = energy_space_proj._energies[rh_index]
-                rh_coeff = energy_space_proj._energy_proj_coeffs[rh_index]
-                rh_state = self._sp.energy_states[rh_index]
+            for lh_index in range(0, rh_index):
+                lh_energy = energy_space_proj._energies[lh_index]
+                lh_coeff = energy_space_proj._energy_proj_coeffs[lh_index]
+                lh_state = self._sp.energy_states[lh_index]
 
-                for lh_index in range(0, rh_index):
-                    lh_energy = energy_space_proj._energies[lh_index]
-                    lh_coeff = energy_space_proj._energy_proj_coeffs[lh_index]
-                    lh_state = self._sp.energy_states[lh_index]
+                wiggler = Wiggle_Factor(rh_energy-lh_energy)
 
-                    wiggler = Wiggle_Factor(rh_energy-lh_energy)
+                exp_val_component = self._sp.boundary_lib.get_x_matrix_element(lh_state, rh_state) 
+                coeff = complex(np.conj(lh_coeff)*rh_coeff)
+                append = wiggler*coeff
 
-                    exp_val_component = self._sp.boundary_lib.get_x_matrix_element(lh_state, rh_state) 
-                    coeff = complex(np.conj(lh_coeff)*rh_coeff)
-                    append = coeff*wiggler
+                self._expectation_value += (2*append*exp_val_component).get_real_part()
+                self._exp_t_deriv += (2j*(lh_energy-rh_energy)*append*exp_val_component).get_real_part()
 
-                    self._expectation_value += (2*append*exp_val_component).get_real_part()
-                    self._exp_t_deriv += (2j*(lh_energy-rh_energy)*append*exp_val_component).get_real_part()
+        
+        for index in range(self._sp.num_energy_states):
+            coeff = energy_space_proj._energy_proj_coeffs[index]
+            state = self._sp.energy_states[index]
+            exp_val_component = self._sp.boundary_lib.get_x_matrix_element(state, state)
+
+            self._expectation_value += Function_of_t(lambda t: np.abs(coeff)**2*exp_val_component*np.ones(np.shape(t)))
 
 class Particle_in_Box_State:
-    def __init__(self, case: str, L: float, m: float, energy_states: list, amplitudes: np.ndarray, gamma=None) -> None:
+    def __init__(self, case: str, L: float, m: float, energy_states = [], amplitudes = np.array([]), gamma=None) -> None:
         self._sp = State_Properties(case, gamma, L, m)
 
         self._esp = Energy_Space_Projection.empty_init(self._sp)
@@ -242,9 +243,6 @@ class Particle_in_Box_State:
 
         self.add_state(energy_states, amplitudes)
 
-    @staticmethod
-    def empty_init(case: str, L: float, m: float) -> Particle_in_Box_State:
-        return Particle_in_Box_State(case, L, m, [], [])
 
     def change_energy_proj_coeff(self, the_state: int, the_coeff: complex) -> None:
         self._esp.change_coeff(the_state, the_coeff)
@@ -321,10 +319,10 @@ class Particle_in_Box_State:
 
     def remove_state(self, the_states: list) -> None:
         if isinstance(the_states, int):
-            ##print("single state converted to list: ", the_states)
+            print("single state converted to list: ", the_states)
             the_states = [the_states]
         
-        ##print("removing state(s): ", the_states)
+        print("removing state(s): ", the_states)
         self._sp.num_energy_states -= len(the_states)
 
         for state in the_states:
@@ -348,18 +346,24 @@ class Particle_in_Box_State:
         self._xsp.recombine(self._esp)
         self._new_ksp.recombine(self._esp)
 
-        ##print("current config: ", self._sp.energy_states)
+        print("current config: ", self._sp.energy_states)
         ##print("energy expectation value: ", self._esp._exp_value)
+
+    def reset(self) -> None:
+        self.remove_state(deepcopy(self._sp.energy_states))
 
     def compute_expectation_values(self) -> None:
         #print("computing expectation values...")
         self._esp.compute_expectation_value()
         self._xsp.compute_expectation_value(self._esp)
-        self._ksp.compute_expectation_value(self._esp)
+        self._new_ksp.compute_expectation_value(self._esp)
+
 
     @property
     def x_space_wavefunction(self) -> Function_of_array_and_t:
-        return self._xsp._x_space_wavefunction
+        L = self._sp.L
+        frame_function = Function_of_array(lambda x: np.heaviside(x+L/2, 0.5)*np.heaviside(L/2-x, 0.5))
+        return self._xsp._x_space_wavefunction*frame_function
 
     @property
     def k_space_wavefunction(self) -> Function_of_array_and_t:
@@ -369,6 +373,30 @@ class Particle_in_Box_State:
     def new_k_space_wavefunction(self) -> Function_of_array_and_t:
         return self._new_ksp._new_k_space_wavefunction
     
+    @property
+    def x_space_expectation_value(self) -> Function_of_t:
+        return self._xsp._expectation_value
+
+    @property
+    def new_k_space_expectation_value(self) -> Function_of_t:
+        return self._new_ksp._expectation_value
+
+    @property
+    def x_space_expectation_value_derivative(self) -> Function_of_t:
+        return self._xsp._exp_t_deriv
+     
+    @property
+    def energy_expectation_value(self) -> float:
+        return self._esp._exp_value
+
+    @property
+    def energy_space_wavefunction(self) -> np.ndarray:
+        return self._esp._energy_space_wavefunc
+    
+    @property
+    def boundary_lib(self) -> New_Style_Boundary:
+        return self._sp.boundary_lib
+
     @property
     def L(self) -> float:
         return self._sp.L
@@ -414,4 +442,3 @@ class Particle_in_Box_State:
     def case(self, new_case: str) -> None:
         self._sp.case = new_case
         self.full_projection_recompute()
-    

@@ -53,7 +53,7 @@ class Bouncing_Gaussian(pib.Particle_in_Box_State):
 
 
     def __init__(self, case: str, L: float, m: float, l_0: int, l_range: int, a: float) -> None:
-        super().__init__(case, L, m, [], [])
+        super().__init__(case, L, m)
         self._l_0 = l_0
         self._l_range = l_range
         self._k_0 = self._sp.boundary_lib.get_kl(l_0)

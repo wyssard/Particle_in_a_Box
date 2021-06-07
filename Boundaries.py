@@ -3,10 +3,12 @@ from __future__ import annotations
 from Backend import *
 from scipy.optimize import fsolve
 from scipy.optimize import brentq
+from scipy.integrate import quad
+from scipy.misc import derivative
 import sys
 
 
-class New_Symmetric_Boundary(New_Style_Boundary):
+class Symmetric_Boundary(New_Style_Boundary):
     def __init__(self, L: float, gamma: float, l_to_kl_mapper_ref: l_to_kl_mapper) -> None:
         super().__init__(L, gamma, l_to_kl_mapper_ref)
         self._pos_energy_even_state_eq = lambda gammaL, kL: gammaL - kL*np.tan(kL/2)
@@ -16,16 +18,12 @@ class New_Symmetric_Boundary(New_Style_Boundary):
 
         self._eps = np.finfo(np.float32).eps
 
-        self._conversion_factor_k_to_new_k = np.sqrt(np.pi/L)
 
     def set_eps(self, new_eps: float) -> None:
         self._eps = new_eps
 
-    def set_L(self, new_L: float) -> None:
-        print("setting L...(symmetric_boundary)")
-        super().set_L(new_L)
-        self._conversion_factor_k_to_new_k = np.sqrt(np.pi/new_L)
-
+    def get_kn(self, n: int | np.ndarray) -> float | np.ndarray:
+        return n*np.pi/self._L
 
     def get_kl(self, l: int) -> complex:
         gammaL = self._gamma*self._L
@@ -204,9 +202,12 @@ class New_Symmetric_Boundary(New_Style_Boundary):
         return Function_of_array(lambda n: self.discrete_momentum_projection_helper(l, n))
 
 
-class New_Neumann_Boudnary(New_Style_Boundary):
+class Neumann_Boudnary(New_Style_Boundary):
     def __init__(self, L: float, gamma: float, l_to_kl_mapper_ref: l_to_kl_mapper) -> None:
         super().__init__(L, gamma, l_to_kl_mapper_ref)
+
+    def get_kn(self, n: int | list) -> float | list:
+        return n*np.pi/self._L
 
     def get_kl(self, l: int) -> complex:
         return l*np.pi/self._L
@@ -328,6 +329,9 @@ class Dirichlet_Boundary(New_Style_Boundary):
     def __init__(self, L: float, gamma: float, l_to_kl_mapper_ref: l_to_kl_mapper) -> None:
         super().__init__(L, gamma, l_to_kl_mapper_ref)
 
+    def get_kn(self, n: int | list) -> float | list:
+        return n*np.pi/self._L
+
     def get_kl(self, l: int) -> complex:
         return (l+1)*np.pi/self._L
 
@@ -362,7 +366,7 @@ class Dirichlet_Boundary(New_Style_Boundary):
         L = self._L
         i_factor = lambda l: 1j if l%2 == 1 else 1
         sign_factor = (-1)**l
-        return Function_of_array(lambda k: i_factor(l)*np.sqrt(L/2)*(np.sin((l+1)*np.pi/2 + k*L/2)/((l+1)*np.pi + k*L) + sign_factor(l)*np.sin((l+1)*np.pi/2 - k*L/2)/((l+1)*np.pi - k*L)))
+        return Function_of_array(lambda k: i_factor(l)*np.sqrt(L/np.pi)*(np.sin((l+1)*np.pi/2 + k*L/2)/((l+1)*np.pi + k*L) + sign_factor*np.sin((l+1)*np.pi/2 - k*L/2)/((l+1)*np.pi - k*L)))
 
     def discrete_momentum_projection_helper(self, l: int, n_array: np.ndarray) -> np.ndarray:
         if isinstance(n_array, int):
@@ -373,6 +377,8 @@ class Dirichlet_Boundary(New_Style_Boundary):
             for n in n_array:
                 if n%2 == 0:
                     coeff_append = 2/np.pi*(-1)**((l+n)/2)*(l+1)/((l+1)**2 - n**2)
+                elif abs(n) == abs(l+1):
+                    coeff_append = 1/2
                 else:
                     coeff_append = 0
             
@@ -380,12 +386,16 @@ class Dirichlet_Boundary(New_Style_Boundary):
             
             return np.array(projection_coefficients)
         
-        else:
+        elif l%2 == 1:
             for n in n_array:
-                if n%2 == 0:
-                    coeff_append = 0
-                else:
+                if n%2 == 1:
                     coeff_append = 2j/np.pi*(-1)**((l+n)/2)*(l+1)/((l+1)**2 - n**2)
+                elif n == l+1:
+                    coeff_append = -1j/2
+                elif n == -(l+1):
+                    coeff_append = 1j/2
+                else:
+                    coeff_append = 0
 
                 projection_coefficients.append(coeff_append)
             
@@ -400,6 +410,9 @@ class Dirichlet_Neumann_Boundary(New_Style_Boundary):
     def __init__(self, L: float, gamma: float, l_to_kl_mapper_ref: l_to_kl_mapper) -> None:
         super().__init__(L, gamma, l_to_kl_mapper_ref)
 
+
+    def get_kn(self, n: int | list) -> float | list:
+        return (n+1/2)*np.pi/self._L
     
     def get_kl(self, l: int) -> complex:
         return (2*l+1)/2*np.pi/self._L
@@ -407,12 +420,12 @@ class Dirichlet_Neumann_Boundary(New_Style_Boundary):
 
     def get_x_space_projection(self, l: int) -> Function_of_array:
         L = self._L
-        kl = self._l_kl_map(l)
+        kl = self._l_kl_map.get_kl(l)
         return Function_of_array(lambda x: np.sqrt(2/L)*np.sin(kl*(x+L/2)))
 
     def get_k_space_projection(self, l: int) -> Function_of_array:
         L = self._L
-        kl = self._l_kl_map(l)
+        kl = self._l_kl_map.get_kl(l)
         lhs_term = Function_of_array(lambda k: np.sin((kl+k)*L/2)/((kl+k)*L)*np.exp(-1j*(2*l+1)*np.pi/4))
         rhs_term = Function_of_array(lambda k: np.sin((kl-k)*L/2)/((kl-k)*L)*np.exp(1j*(2*l+1)*np.pi/4))
         return 1j*np.sqrt(L/np.pi)*(lhs_term - rhs_term)
@@ -436,6 +449,9 @@ class Dirichlet_Neumann_Boundary(New_Style_Boundary):
             
             elif (n+l)%2 == 1:
                 coeff_append = -1j/np.pi*(-1)**((l-n-1)/2)*np.exp(1j*(2*l+1)*np.pi/4)/(l-n)
+            
+            else:
+                print("eh?")
 
             projection_coefficients.append(coeff_append)
         
@@ -462,3 +478,101 @@ class Dirichlet_Neumann_Boundary(New_Style_Boundary):
             return 1j/L*(lhs_state-rhs_state)/(lhs_state+rhs_state+1)
         else:
             return 1j/L*(lhs_state+rhs_state+1)/(rhs_state-lhs_state)
+
+
+class Anti_Symmetric_Boundary(New_Style_Boundary):
+    def __init__(self, L: float, gamma: float, l_to_kl_mapper_ref: l_to_kl_mapper) -> None:
+        super().__init__(L, gamma, l_to_kl_mapper_ref)
+
+    @staticmethod
+    def x_space_projection_for_nummerics(L, gamma, l, kl) -> Function_of_array:
+        i_factor = lambda l: 1 if l%2 == 0 else -1j
+            
+        if np.imag(kl) == 0:
+            boundray_expr = np.exp(1j*kl*L)*(gamma + 1j*kl)/(gamma - 1j*kl)
+            norm_expr = np.sqrt(2/L)/np.sqrt(1 - np.real(boundray_expr)*np.sin(kl*L)/(kl*L))
+            return Function_of_array(lambda x: norm_expr*1/2*i_factor(l)*(np.exp(1j*kl*x) - boundray_expr*np.exp(-1j*kl*x)))
+        
+        else:
+            kappal = np.imag(kl)
+            return Function_of_array(lambda x: np.sqrt(kappal/np.sinh(kappal*L))*np.exp(-gamma*x))
+
+    def get_kn(self, n: int | list) -> float | list:
+        return n*np.pi/self._L
+
+    def get_kl(self, l: int) -> complex:
+        if l == 0:
+            return 1j*self._gamma
+        else:
+            return l*np.pi/self._L
+
+    def get_x_space_projection(self, l: int) -> Function_of_array:
+        gamma = self._gamma
+        L = self._L
+        kl = self._l_kl_map.get_kl(l)
+
+        return self.x_space_projection_for_nummerics(L, gamma, l, kl)
+
+    def get_x_matrix_element(self, lhs_state: int, rhs_state: int) -> complex:
+        gamma = self._gamma
+        L = self._L
+
+        lhs_k = self._l_kl_map.get_kl(lhs_state)
+        rhs_k = self._l_kl_map.get_kl(rhs_state)
+
+        lhs_integrand = self.x_space_projection_for_nummerics(L, gamma, lhs_state, lhs_k)
+        rhs_integrand = self.x_space_projection_for_nummerics(L, gamma, rhs_state, rhs_k)
+        integrand = lambda x: np.conj(lhs_integrand(x))*x*rhs_integrand(x)
+        real = quad(lambda x: np.real(integrand(x)), -L/2, L/2)[0]
+        imag = quad(lambda x: np.imag(integrand(x)), -L/2, L/2)[0]
+
+        return real + 1j*imag
+
+    def get_k_space_projection(self, l: int) -> Function_of_array:
+        gamma = self._gamma
+        L = self._L
+        kl = self._l_kl_map.get_kl(l)
+
+        x_space_proj = self.x_space_projection_for_nummerics(L, gamma, l, kl)
+
+        def converter(k_range: np.ndarray) -> np.ndarray:
+            if isinstance(k_range, (int, float)):
+                k_range = [k_range]
+            
+            out = []
+            for k in k_range:
+                integrand = lambda x: x_space_proj(x)*np.exp(-1j*k*x)
+                real = quad(lambda x: np.real(integrand(x)), -L/2, L/2)[0]
+                imag = quad(lambda x: np.imag(integrand(x)), -L/2, L/2)[0]
+                out.append((real + 1j*imag)*1/np.sqrt(2*L))
+            
+            return np.array(out)
+        
+        return Function_of_array(converter)
+
+    def discrete_momentum_projection_helper(self, l: int, n_array: np.ndarray) -> np.ndarray:
+        kn_array = np.pi/self._L*n_array
+        temp_k_space_proj = np.sqrt(np.pi/self._L)*self.get_k_space_projection(l)
+        return temp_k_space_proj(kn_array)
+
+    def get_new_k_space_projection(self, l: int) -> Function_of_array:
+        return Function_of_array(lambda n: self.discrete_momentum_projection_helper(l, n))
+
+    def get_pR_matrix_element(self, lhs_state: int, rhs_state: int) -> complex:
+        gamma = self._gamma
+        L = self._L
+
+        lhs_k = self._l_kl_map.get_kl(lhs_state)
+        rhs_k = self._l_kl_map.get_kl(rhs_state)
+
+        lhs_integrand = self.x_space_projection_for_nummerics(L, gamma, lhs_state, lhs_k)
+        rhs_integrand = self.x_space_projection_for_nummerics(L, gamma, rhs_state, rhs_k)
+
+        integrand = lambda x: (-1j)*np.conj(lhs_integrand(x))*derivative(rhs_integrand, x, 0.0001)
+
+        real = quad(lambda x: np.real(integrand(x)), -L/2, L/2)[0]
+        imag = quad(lambda x: np.imag(integrand(x)), -L/2, L/2)[0]
+
+
+        return real + 1j*imag
+        
