@@ -5,6 +5,14 @@ from Backend import *
 import Boundaries
 
 class State_Properties:
+    """
+    Class that contains all the information of the 'particle in a box' state.
+    The latter information consists of the specific boundary condition [case]
+    extension parameter [gamma] the mass of the particle [m] the width of the 
+    box [L] as well as a list containing the quantum numbers [l] of the energy 
+    states that our state consits of; the corresponding [kl] values are also listed.
+
+    """
     def __init__(self, case: str, gamma: float, L: float, m: float) -> None:
         self._gamma = gamma
         self._L = L
@@ -390,7 +398,7 @@ class Particle_in_Box_State:
         return self._esp._exp_value
 
     @property
-    def energy_space_wavefunction(self) -> np.ndarray:
+    def energy_space_wavefunction(self) -> Energy_Space_Wavefunction:
         return self._esp._energy_space_wavefunc
     
     @property

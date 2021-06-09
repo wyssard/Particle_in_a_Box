@@ -4,7 +4,12 @@ from typing import Callable
 import numpy as np
 from abc import ABC, abstractmethod
 
+
 class Function_Base(ABC):
+    """
+    Abstract base class for function like objects that mimic behaviour of mathematical functions
+    such as addition and multiplication of functions
+    """
     def __init__(self, function: Callable) -> None:
         self._function = function
 
@@ -39,6 +44,20 @@ class Function_Base(ABC):
 
 
 class None_Function(Function_Base):
+    """
+    Instances of this class can be used as prototypical placeholder objects
+    that are later to be overwriten by more complex Function_Base objects.
+    The main application of this class is to provide trivial function objects
+    that do not represent a mathematical function but can be incremented 
+    with other Function_Base objects. 
+
+    Examples
+    -------
+    >>> f = None_Function()
+    >>> f += g
+
+    for g being an arbtirary function objects derived from Function_Base
+    """
     def __init__(self):
         Function_Base.__init__(self, None)
 
@@ -48,7 +67,7 @@ class None_Function(Function_Base):
     def __add__(self, other: Function_Base) -> Function_Base:
         return other
     
-    def __mul__(self):
+    def __mul__(self) -> None_Function:
         return self
 
     def get_real_part(self):
@@ -59,6 +78,9 @@ class None_Function(Function_Base):
 
 
 class Function_of_t(Function_Base):
+    """
+    Class to mimic algebraic behaviour of mathematical functions in one variable t
+    """
     def __init__(self, function: Callable[[float], float]):
         Function_Base.__init__(self, function)
 
@@ -66,7 +88,12 @@ class Function_of_t(Function_Base):
         return self._function(t)
     
     def __add__(self, other: Function_Base) -> Function_of_t:
-        return Function_of_t(lambda t: self._function(t) + other._function(t))
+        if isinstance(other, None_Function):
+            return self
+        elif isinstance(other, Function_of_t):
+            return Function_of_t(lambda t: self._function(t) + other._function(t))
+        else:
+            return NotImplemented
     
     def __mul__(self, other) -> Function_of_t:
         if isinstance(other, Function_of_t):
@@ -77,6 +104,10 @@ class Function_of_t(Function_Base):
             return Function_of_array_and_t(lambda n,t: self._function(t)*other._function(n,t))
         elif isinstance(other, (int, float, complex)):
             return Function_of_t(lambda t: other*self._function(t))
+        elif isinstance(other, None_Function):
+            return other
+        else:
+            return NotImplemented
 
     def get_real_part(self) -> Function_of_t:
         return Function_of_t(lambda t: np.real(self._function(t)))
@@ -93,7 +124,12 @@ class Function_of_array(Function_Base):
         return self._function(n)
 
     def __add__(self, other: Function_Base) -> Function_of_array:
-        return Function_of_array(lambda n: self._function(n) + other._function(n))
+        if isinstance(other, None_Function):
+            return self
+        elif isinstance(other, Function_of_array):
+            return Function_of_array(lambda n: self._function(n) + other._function(n))
+        else:
+            return NotImplemented
 
     def __mul__(self, other):
         if isinstance(other, Function_of_t):
@@ -104,6 +140,10 @@ class Function_of_array(Function_Base):
             return Function_of_array_and_t(lambda n,t: self._function(n)*other._function(n,t))
         elif isinstance(other, (int, float, complex)):
             return Function_of_array(lambda n: other*self._function(n))
+        elif isinstance(other, None_Function):
+            return other
+        else:
+            return NotImplemented
 
     def get_real_part(self) -> Function_of_array:
         return Function_of_array(lambda n: np.real(self._function(n)))
@@ -116,22 +156,26 @@ class Function_of_array_and_t(Function_Base):
     def __init__(self, function: Callable[[np.ndarray, float], np.ndarray]):
         Function_Base.__init__(self, function)
 
-    def __call__(self, x: np.ndarray, t: float) -> np.ndarray:
-        return self._function(x, t)
+    def __call__(self, n: np.ndarray, t: float) -> np.ndarray:
+        return self._function(n, t)
         
     def __add__(self, other) -> Function_of_array_and_t:
         if isinstance(other, Function_of_array_and_t):
-            return Function_of_array_and_t(lambda x,t: self._function(x,t) + other._function(x,t))
+            return Function_of_array_and_t(lambda n,t: self._function(n,t) + other._function(n,t))
+        elif isinstance(other, None_Function):
+            return self
         else:
             return NotImplemented
 
     def __mul__(self, other) -> Function_of_array_and_t:
         if isinstance(other, Function_of_array_and_t):
-            return Function_of_array_and_t(lambda x, t: self._function(x,t)*other._function(x,t))
+            return Function_of_array_and_t(lambda n, t: self._function(n,t)*other._function(n,t))
         elif isinstance(other, (complex, float, int)):
-            return Function_of_array_and_t(lambda x, t: other*self._function(x,t))
+            return Function_of_array_and_t(lambda n, t: other*self._function(n,t))
         elif isinstance(other, Wiggle_Factor):
-            return Function_of_array_and_t(lambda x,t: other(t)*self._function(x,t))
+            return Function_of_array_and_t(lambda n,t: other(t)*self._function(n,t))
+        elif isinstance(other, None_Function):
+            return other
         else:
             return NotImplemented
 
@@ -142,6 +186,72 @@ class Function_of_array_and_t(Function_Base):
     def get_imag_part(self) -> Function_of_array_and_t:
         return Function_of_array_and_t(lambda x,t: np.imag(self._function(x,t)))
 
+
+class Function_of_1var(Function_Base):
+    def __init__(self, function: Callable[[float], float]):
+        Function_Base.__init__(self, function)
+
+    def __call__(self, x: float) -> float:
+        return self._function(x)
+    
+    def __add__(self, other: Function_Base) -> Function_of_1var:
+        if isinstance(other, None_Function):
+            return self
+        elif isinstance(other, Function_of_1var):
+            return Function_of_t(lambda x: self._function(x) + other._function(x))
+        else:
+            return NotImplemented
+    
+    def __mul__(self, other) -> Function_of_1var:
+        if isinstance(other, Function_of_1var):
+            return Function_of_1var(lambda x: self._function(x)*other._function(x))
+        elif isinstance(other, Function_of_2var):
+            return Function_of_2var()
+        elif isinstance(other, None_Function):
+            return other
+        else:
+            return NotImplemented
+
+    def get_real_part(self) -> Function_of_1var:
+        return Function_of_1var(lambda x: np.real(self._function(x)))
+
+    def get_imag_part(self) -> Function_of_t:
+        return Function_of_1var(lambda x: np.imag(self._function(x)))
+
+
+class Function_of_2var(Function_Base):
+    def __init__(self, function: Callable[[np.ndarray, np.ndarray], np.ndarray]):
+        Function_Base.__init__(self, function)
+
+    def __call__(self, x: np.ndarray, y: np.array) -> np.ndarray:
+        return self._function(x, y)
+        
+    def __add__(self, other) -> Function_of_2var:
+        if isinstance(other, Function_of_2var):
+            return Function_of_2var(lambda x,y: self._function(x,y) + other._function(x,y))
+        elif isinstance(other, None_Function):
+            return self
+        else:
+            return NotImplemented
+
+    def __mul__(self, other) -> Function_of_2var:
+        if isinstance(other, Function_of_2var):
+            return Function_of_2var(lambda x, y: self._function(x,y)*other._function(x,y))
+        elif isinstance(other, (complex, float, int)):
+            return Function_of_2var(lambda x, y: other*self._function(x,y))
+        elif isinstance(other, Wiggle_Factor):
+            return Function_of_2var(lambda x,y: other(y)*self._function(x,y))
+        elif isinstance(other, None_Function):
+            return other
+        else:
+            return NotImplemented
+
+
+    def get_real_part(self) -> Function_of_2var:
+        return Function_of_2var(lambda x,y: np.real(self._function(x,y)))
+
+    def get_imag_part(self) -> Function_of_2var:
+        return Function_of_2var(lambda x,y: np.imag(self._function(x,y)))
 
 class Wiggle_Factor(Function_of_t):
     def __init__(self, energy: float):

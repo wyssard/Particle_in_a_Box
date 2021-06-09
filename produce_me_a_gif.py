@@ -15,7 +15,7 @@ plt.rcParams["animation.html"] = "jshtml"
 plt.rcParams['animation.ffmpeg_path'] = 'C:\\ffmpeg\\bin\\ffmpeg.exe'
 
 
-case = "neumann"
+case = "dirichlet_neumann"
 L = np.pi
 m = 1
 a = L/10
@@ -23,16 +23,15 @@ l_0 = 100
 l_range = 15
 
 fps = 20
-speed = 0.05
-real_time = (4*m*L**2/np.pi)/2
+speed = 0.025
+real_time = (4*m*L**2/np.pi)/4
 time = real_time/speed
-time = 5
 
 
 myState = special.Bouncing_Gaussian(case, L, m, l_0, l_range, a)
 
 # Create Animations
-eps = 0.5
+eps = 0.25
 
 x = np.linspace(-L/2, L/2, 300, endpoint=True)
 n_bound = l_0+l_range
@@ -60,6 +59,7 @@ x_distr_plot.set_ylabel("Probability Density")
 k_distr_plot.set_ylabel("Probability Distribution / Density")
 
 k_distr_plot.set_ylim([0, 0.5])
+x_distr_plot.set_xlim([-L/2-eps, L/2+eps])
 
 k_lines = k_distr_plot.plot(k, np.abs(k_space_wavefunc(k, 0))**2, animated=True, color = darkColor)
 x_lines = x_distr_plot.plot(x, np.abs(x_space_wavefunc(x, 0))**2, animated=True, color = darkColor)
