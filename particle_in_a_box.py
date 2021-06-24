@@ -7,12 +7,13 @@ import Boundaries
 class State_Properties:
     """
     Class that contains all the information of the 'particle in a box' state.
-    The latter information consists of the specific boundary condition [case]
-    extension parameter [gamma] the mass of the particle [m] the width of the 
-    box [L] as well as a list containing the quantum numbers [l] of the energy 
-    states that our state consits of; the corresponding [kl] values are also listed.
-
+    The latter information consists of the specific boundary condition 'case', 
+    the extension parameter 'gamma', the mass of the particle 'm', the width of 
+    the box 'L' as well as of a list containing the quantum numbers 'l' of the 
+    energy states that our state consits of; the corresponding 'k_l' values are 
+    also stored as a list
     """
+
     def __init__(self, case: str, gamma: float, L: float, m: float) -> None:
         self._gamma = gamma
         self._L = L
@@ -45,6 +46,8 @@ class State_Properties:
 
     @property
     def case(self) -> str:
+        """string that repersents the boundary condition imposed to the energy
+        space wavefunctions"""
         return self._case
 
     @case.setter
@@ -54,10 +57,15 @@ class State_Properties:
 
     @property
     def boundary_lib(self) -> New_Style_Boundary:
+        """object of type 'New_Style_Boundary' containing all the funcionality
+        that specifically depends on the choice of the boundary condition'"""
         return self._boudary_lib
 
     @property
     def gamma(self) -> float:
+        """parameter to specify the Robin boundary conditions under the 
+        restrictions for symmetric (gamma_- = gamma_+ =: gamma) or anti 
+        symmetric (-gamma_- = gamma_+ =: gamma) boundaries"""
         return self._gamma
 
     @gamma.setter
@@ -65,8 +73,10 @@ class State_Properties:
         self._gamma = new_gamma
         self._boudary_lib.set_gamma(new_gamma)
         
+        
     @property
     def L(self) -> float:
+        """the length of the interval (box)"""
         return self._L
 
     @L.setter
@@ -77,6 +87,7 @@ class State_Properties:
 
     @property
     def m(self) -> float:
+        """the mass of the particle"""
         return self._m
 
     @m.setter
@@ -85,6 +96,8 @@ class State_Properties:
     
     @property
     def num_energy_states(self) -> int:
+        """the number of energy states the 'particle in a box'-state is 
+        projected onto"""
         return self._num_energy_states
     
     @num_energy_states.setter
@@ -93,14 +106,19 @@ class State_Properties:
 
     @property
     def energy_states(self) -> List[int]:
+        """unorderd list containing the quantum numbers 'l' of the energy states
+        onto which the 'particle in a box'-state is projected"""
         return self._energy_states
 
     @property
     def k_kappa_l(self) -> List[complex]:
+        """list of the same order as 'energy_states' containing the k_l values
+        that correspond to the quantum numbers 'l' found in 'energy_states'"""
         return self._k_kappa_l_array
 
     @property
     def l_kl_map(self) -> l_to_kl_mapper:
+        """see documentation of 'l_to_kl_mapper'"""
         return self._l_kl_map
 
 class Energy_Space_Projection:
@@ -137,7 +155,7 @@ class Energy_Space_Projection:
             self._exp_value += (np.abs(self._energy_proj_coeffs[i])**2)*self._energies[i]
         
 class New_Momentum_Space_Projection:
-    def __init__(self, new_k_space_wavefunction: Function_of_array_and_t, new_k_space_single_energy_proj: list, state_properties: State_Properties) -> None:
+    def __init__(self, new_k_space_wavefunction: Function_of_n_and_t, new_k_space_single_energy_proj: list, state_properties: State_Properties) -> None:
         self._new_k_space_wavefunction = new_k_space_wavefunction
         self._new_k_space_single_energy_proj = new_k_space_single_energy_proj
         self._sp = state_properties
@@ -175,7 +193,7 @@ class New_Momentum_Space_Projection:
                 self._expectation_value += (coeff*wiggler*exp_val_component).get_real_part()
 
 class Momentum_Space_Projection:
-    def __init__(self, cont_k_space_wavefunction: Function_of_array_and_t, cont_k_space_single_energy_proj: list, state_properties: State_Properties) -> None:
+    def __init__(self, cont_k_space_wavefunction: Function_of_n_and_t, cont_k_space_single_energy_proj: list, state_properties: State_Properties) -> None:
         self._cont_k_space_wavefunction = cont_k_space_wavefunction
         self._cont_k_space_single_energy_proj = cont_k_space_single_energy_proj
         self._sp = state_properties
@@ -191,7 +209,7 @@ class Momentum_Space_Projection:
             self._cont_k_space_wavefunction += temp_proj_coeff[i]*self._cont_k_space_single_energy_proj[i]*temp_wigglers[i]
 
 class Position_Space_Projection:
-    def __init__(self, x_space_wavefunction: Function_of_array_and_t, x_space_single_energy_proj: list, state_properties: State_Properties) -> None:
+    def __init__(self, x_space_wavefunction: Function_of_n_and_t, x_space_single_energy_proj: list, state_properties: State_Properties) -> None:
         self._x_space_wavefunction = x_space_wavefunction
         self._x_space_single_energy_proj = x_space_single_energy_proj
         self._sp = state_properties
@@ -368,17 +386,17 @@ class Particle_in_Box_State:
 
 
     @property
-    def x_space_wavefunction(self) -> Function_of_array_and_t:
+    def x_space_wavefunction(self) -> Function_of_n_and_t:
         L = self._sp.L
-        frame_function = Function_of_array(lambda x: np.heaviside(x+L/2, 0.5)*np.heaviside(L/2-x, 0.5))
+        frame_function = Function_of_n(lambda x: np.heaviside(x+L/2, 0.5)*np.heaviside(L/2-x, 0.5))
         return self._xsp._x_space_wavefunction*frame_function
 
     @property
-    def k_space_wavefunction(self) -> Function_of_array_and_t:
+    def k_space_wavefunction(self) -> Function_of_n_and_t:
         return self._ksp._cont_k_space_wavefunction
 
     @property
-    def new_k_space_wavefunction(self) -> Function_of_array_and_t:
+    def new_k_space_wavefunction(self) -> Function_of_n_and_t:
         return self._new_ksp._new_k_space_wavefunction
     
     @property

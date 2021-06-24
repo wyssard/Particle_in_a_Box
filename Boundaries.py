@@ -77,39 +77,39 @@ class Symmetric_Boundary(New_Style_Boundary):
         pass
 
 
-    def get_x_space_projection(self, l: int) -> Function_of_array:
+    def get_x_space_projection(self, l: int) -> Function_of_n:
         L = self._L
         kl = self._l_kl_map.get_kl(l)
         if l%2 == 1:
             if np.imag(kl) == 0:
-                return Function_of_array(lambda x: np.sqrt(2/L)*np.power(1-np.sin(kl*L)/(kl*L), -1/2)*np.sin(kl*x))
+                return Function_of_n(lambda x: np.sqrt(2/L)*np.power(1-np.sin(kl*L)/(kl*L), -1/2)*np.sin(kl*x))
             else:
                 kappal = np.imag(kl)
-                return Function_of_array(lambda x: np.sqrt(2/L)*np.power(-1+np.sinh(kappal*L)/(kappal*L), -1/2)*np.sinh(kappal*x))
+                return Function_of_n(lambda x: np.sqrt(2/L)*np.power(-1+np.sinh(kappal*L)/(kappal*L), -1/2)*np.sinh(kappal*x))
         else:
             if np.imag(kl) == 0:
-                return Function_of_array(lambda x: np.sqrt(2/L)*np.power(1+np.sin(kl*L)/(kl*L), -1/2)*np.cos(kl*x))
+                return Function_of_n(lambda x: np.sqrt(2/L)*np.power(1+np.sin(kl*L)/(kl*L), -1/2)*np.cos(kl*x))
             else:
                 kappal = np.imag(kl)
-                return Function_of_array(lambda x: np.sqrt(2/L)*np.power(1+np.sinh(kappal*L)/(kappal*L), -1/2)*np.cosh(kappal*x))
+                return Function_of_n(lambda x: np.sqrt(2/L)*np.power(1+np.sinh(kappal*L)/(kappal*L), -1/2)*np.cosh(kappal*x))
         
 
-    def get_k_space_projection(self, l: int) -> Function_of_array:
+    def get_k_space_projection(self, l: int) -> Function_of_n:
         L = self._L
         kl = self._l_kl_map.get_kl(l)
 
         if l%2 == 1:
             if np.imag(kl) == 0:
-                return Function_of_array(lambda k: 1j*np.sqrt(L/np.pi)/np.sqrt(1 - np.sin(kl*L)/(kl*L))*(np.sin((kl+k)*L/2)/(kl*L+k*L) - np.sin((kl-k)*L/2)/(kl*L-k*L)))
+                return Function_of_n(lambda k: 1j*np.sqrt(L/np.pi)/np.sqrt(1 - np.sin(kl*L)/(kl*L))*(np.sin((kl+k)*L/2)/(kl*L+k*L) - np.sin((kl-k)*L/2)/(kl*L-k*L)))
             else:
                 kappal = np.imag(kl)
-                return Function_of_array(lambda k: (2j)*np.sqrt(L/np.pi)/np.sqrt(-1+np.sinh(kappal*L)/(kappal*L))*(k*L*np.cos(k*L/2)*np.sinh(kappal*L/2) - kappal*L*np.sin(k*L/2)*np.cosh(kappal*L/2))/((kappal*L)**2+(k*L)**2))
+                return Function_of_n(lambda k: (2j)*np.sqrt(L/np.pi)/np.sqrt(-1+np.sinh(kappal*L)/(kappal*L))*(k*L*np.cos(k*L/2)*np.sinh(kappal*L/2) - kappal*L*np.sin(k*L/2)*np.cosh(kappal*L/2))/((kappal*L)**2+(k*L)**2))
         else:
             if np.imag(kl) == 0:
-                return Function_of_array(lambda k: np.sqrt(L/np.pi)/np.sqrt(1 + np.sin(kl*L)/(kl*L))*(np.sin((kl+k)*L/2)/(kl*L+k*L) + np.sin((kl-k)*L/2)/(kl*L-k*L)))
+                return Function_of_n(lambda k: np.sqrt(L/np.pi)/np.sqrt(1 + np.sin(kl*L)/(kl*L))*(np.sin((kl+k)*L/2)/(kl*L+k*L) + np.sin((kl-k)*L/2)/(kl*L-k*L)))
             else:
                 kappal = np.imag(kl)
-                return Function_of_array(lambda k: (2)*np.sqrt(L/np.pi)/np.sqrt(1+np.sinh(kappal*L)/(kappal*L))*(k*L*np.cos(k*L/2)*np.sinh(kappal*L/2) + kappal*L*np.sin(k*L/2)*np.cosh(kappal*L/2))/((kappal*L)**2+(k*L)**2))
+                return Function_of_n(lambda k: (2)*np.sqrt(L/np.pi)/np.sqrt(1+np.sinh(kappal*L)/(kappal*L))*(k*L*np.cos(k*L/2)*np.sinh(kappal*L/2) + kappal*L*np.sin(k*L/2)*np.cosh(kappal*L/2))/((kappal*L)**2+(k*L)**2))
 
 
     def get_x_matrix_element(self, lhs_state: int, rhs_state: int) -> complex:
@@ -198,8 +198,8 @@ class Symmetric_Boundary(New_Style_Boundary):
         return temp_k_space_proj(kn_array)
 
 
-    def get_new_k_space_projection(self, l: int) -> Function_of_array:
-        return Function_of_array(lambda n: self.discrete_momentum_projection_helper(l, n))
+    def get_new_k_space_projection(self, l: int) -> Function_of_n:
+        return Function_of_n(lambda n: self.discrete_momentum_projection_helper(l, n))
 
 
 class Neumann_Boudnary(New_Style_Boundary):
@@ -213,15 +213,15 @@ class Neumann_Boudnary(New_Style_Boundary):
         return l*np.pi/self._L
 
 
-    def get_x_space_projection(self, l: int) -> Function_of_array:
+    def get_x_space_projection(self, l: int) -> Function_of_n:
         L = self._L
         if l == 0:
-            return Function_of_array(lambda x: 1/np.sqrt(L)*np.ones(np.shape(x)))
+            return Function_of_n(lambda x: 1/np.sqrt(L)*np.ones(np.shape(x)))
         else:
             if l%2 == 0:
-                return Function_of_array(lambda x: np.sqrt(2/L)*np.cos(l*np.pi/L*x))
+                return Function_of_n(lambda x: np.sqrt(2/L)*np.cos(l*np.pi/L*x))
             else:
-                return Function_of_array(lambda x: np.sqrt(2/L)*np.sin(l*np.pi/L*x))
+                return Function_of_n(lambda x: np.sqrt(2/L)*np.sin(l*np.pi/L*x))
 
 
     def get_x_matrix_element(self, lhs_state: int, rhs_state: int) -> complex:
@@ -242,17 +242,17 @@ class Neumann_Boudnary(New_Style_Boundary):
             return (2*L/np.pi**2)*(-1)**((lhs_state+rhs_state-1)/2)*2*(lhs_state**2 + rhs_state**2)/(lhs_state**2 - rhs_state**2)**2
 
 
-    def get_k_space_projection(self, l: int) -> Function_of_array:
+    def get_k_space_projection(self, l: int) -> Function_of_n:
         L = self._L
 
         if l == 0:
-            return Function_of_array(lambda k: np.sqrt(2*L/np.pi)*np.sin(k*L/2)/(k*L))
+            return Function_of_n(lambda k: np.sqrt(2*L/np.pi)*np.sin(k*L/2)/(k*L))
         
         if l%2 == 0:
-            return Function_of_array(lambda k: np.sqrt(L/np.pi)*(np.sin(l*np.pi/2 + k*L/2)/(l*np.pi + k*L) + np.sin(l*np.pi/2 - k*L/2)/(l*np.pi - k*L)))
+            return Function_of_n(lambda k: np.sqrt(L/np.pi)*(np.sin(l*np.pi/2 + k*L/2)/(l*np.pi + k*L) + np.sin(l*np.pi/2 - k*L/2)/(l*np.pi - k*L)))
 
         else:
-            return Function_of_array(lambda k: 1j*np.sqrt(L/np.pi)*(np.sin(l*np.pi/2 + k*L/2)/(l*np.pi + k*L) - np.sin(l*np.pi/2 - k*L/2)/(l*np.pi - k*L)))
+            return Function_of_n(lambda k: 1j*np.sqrt(L/np.pi)*(np.sin(l*np.pi/2 + k*L/2)/(l*np.pi + k*L) - np.sin(l*np.pi/2 - k*L/2)/(l*np.pi - k*L)))
 
 
     def get_pR_matrix_element(self, lhs_state: int, rhs_state: int) -> complex:
@@ -321,8 +321,8 @@ class Neumann_Boudnary(New_Style_Boundary):
             return np.array(projection_coefficients)
 
 
-    def get_new_k_space_projection(self, l: int) -> Function_of_array:
-        return Function_of_array(lambda n: self.discrete_momemntum_projection_helper(l, n))
+    def get_new_k_space_projection(self, l: int) -> Function_of_n:
+        return Function_of_n(lambda n: self.discrete_momemntum_projection_helper(l, n))
 
 
 class Dirichlet_Boundary(New_Style_Boundary):
@@ -335,12 +335,12 @@ class Dirichlet_Boundary(New_Style_Boundary):
     def get_kl(self, l: int) -> complex:
         return (l+1)*np.pi/self._L
 
-    def get_x_space_projection(self, l: int) -> Function_of_array:
+    def get_x_space_projection(self, l: int) -> Function_of_n:
         L = self._L
         if l%2 == 0:
-            return Function_of_array(lambda x: np.sqrt(2/L)*np.cos((l+1)*np.pi/L*x))
+            return Function_of_n(lambda x: np.sqrt(2/L)*np.cos((l+1)*np.pi/L*x))
         else:
-            return Function_of_array(lambda x: np.sqrt(2/L)*np.sin((l+1)*np.pi/L*x))
+            return Function_of_n(lambda x: np.sqrt(2/L)*np.sin((l+1)*np.pi/L*x))
     
     def get_x_matrix_element(self, lhs_state: int, rhs_state: int) -> complex:
         if lhs_state%2 == rhs_state%2:
@@ -362,11 +362,11 @@ class Dirichlet_Boundary(New_Style_Boundary):
             return 1j/L*sign_expr*(4*(lhs_state+1)*(rhs_state+1))/((lhs_state+1)**2 - (rhs_state+1)**2)
 
 
-    def get_k_space_projection(self, l: int) -> Function_of_array:
+    def get_k_space_projection(self, l: int) -> Function_of_n:
         L = self._L
         i_factor = lambda l: 1j if l%2 == 1 else 1
         sign_factor = (-1)**l
-        return Function_of_array(lambda k: i_factor(l)*np.sqrt(L/np.pi)*(np.sin((l+1)*np.pi/2 + k*L/2)/((l+1)*np.pi + k*L) + sign_factor*np.sin((l+1)*np.pi/2 - k*L/2)/((l+1)*np.pi - k*L)))
+        return Function_of_n(lambda k: i_factor(l)*np.sqrt(L/np.pi)*(np.sin((l+1)*np.pi/2 + k*L/2)/((l+1)*np.pi + k*L) + sign_factor*np.sin((l+1)*np.pi/2 - k*L/2)/((l+1)*np.pi - k*L)))
 
     def discrete_momentum_projection_helper(self, l: int, n_array: np.ndarray) -> np.ndarray:
         if isinstance(n_array, int):
@@ -402,8 +402,8 @@ class Dirichlet_Boundary(New_Style_Boundary):
             return np.array(projection_coefficients)
 
 
-    def get_new_k_space_projection(self, l: int) -> Function_of_array:
-        return Function_of_array(lambda n: self.discrete_momentum_projection_helper(l, n))
+    def get_new_k_space_projection(self, l: int) -> Function_of_n:
+        return Function_of_n(lambda n: self.discrete_momentum_projection_helper(l, n))
 
 
 class Dirichlet_Neumann_Boundary(New_Style_Boundary):
@@ -418,16 +418,16 @@ class Dirichlet_Neumann_Boundary(New_Style_Boundary):
         return (2*l+1)/2*np.pi/self._L
     
 
-    def get_x_space_projection(self, l: int) -> Function_of_array:
+    def get_x_space_projection(self, l: int) -> Function_of_n:
         L = self._L
         kl = self._l_kl_map.get_kl(l)
-        return Function_of_array(lambda x: np.sqrt(2/L)*np.sin(kl*(x+L/2)))
+        return Function_of_n(lambda x: np.sqrt(2/L)*np.sin(kl*(x+L/2)))
 
-    def get_k_space_projection(self, l: int) -> Function_of_array:
+    def get_k_space_projection(self, l: int) -> Function_of_n:
         L = self._L
         kl = self._l_kl_map.get_kl(l)
-        lhs_term = Function_of_array(lambda k: np.sin((kl+k)*L/2)/((kl+k)*L)*np.exp(-1j*(2*l+1)*np.pi/4))
-        rhs_term = Function_of_array(lambda k: np.sin((kl-k)*L/2)/((kl-k)*L)*np.exp(1j*(2*l+1)*np.pi/4))
+        lhs_term = Function_of_n(lambda k: np.sin((kl+k)*L/2)/((kl+k)*L)*np.exp(-1j*(2*l+1)*np.pi/4))
+        rhs_term = Function_of_n(lambda k: np.sin((kl-k)*L/2)/((kl-k)*L)*np.exp(1j*(2*l+1)*np.pi/4))
         return 1j*np.sqrt(L/np.pi)*(lhs_term - rhs_term)
 
     
@@ -458,8 +458,8 @@ class Dirichlet_Neumann_Boundary(New_Style_Boundary):
         return np.array(projection_coefficients)
 
 
-    def get_new_k_space_projection(self, l: int) -> Function_of_array:
-        return Function_of_array(lambda n: self.discrete_momentum_projection_helper(l, n))
+    def get_new_k_space_projection(self, l: int) -> Function_of_n:
+        return Function_of_n(lambda n: self.discrete_momentum_projection_helper(l, n))
 
     
     def get_x_matrix_element(self, lhs_state: int, rhs_state: int) -> complex:
@@ -485,17 +485,17 @@ class Anti_Symmetric_Boundary(New_Style_Boundary):
         super().__init__(L, gamma, l_to_kl_mapper_ref)
 
     @staticmethod
-    def x_space_projection_for_nummerics(L, gamma, l, kl) -> Function_of_array:
+    def x_space_projection_for_nummerics(L, gamma, l, kl) -> Function_of_n:
         i_factor = lambda l: 1 if l%2 == 0 else -1j
             
         if np.imag(kl) == 0:
             boundray_expr = np.exp(1j*kl*L)*(gamma + 1j*kl)/(gamma - 1j*kl)
             norm_expr = np.sqrt(2/L)/np.sqrt(1 - np.real(boundray_expr)*np.sin(kl*L)/(kl*L))
-            return Function_of_array(lambda x: norm_expr*1/2*i_factor(l)*(np.exp(1j*kl*x) - boundray_expr*np.exp(-1j*kl*x)))
+            return Function_of_n(lambda x: norm_expr*1/2*i_factor(l)*(np.exp(1j*kl*x) - boundray_expr*np.exp(-1j*kl*x)))
         
         else:
             kappal = np.imag(kl)
-            return Function_of_array(lambda x: np.sqrt(kappal/np.sinh(kappal*L))*np.exp(-gamma*x))
+            return Function_of_n(lambda x: np.sqrt(kappal/np.sinh(kappal*L))*np.exp(-gamma*x))
 
     def get_kn(self, n: int | list) -> float | list:
         return n*np.pi/self._L
@@ -506,7 +506,7 @@ class Anti_Symmetric_Boundary(New_Style_Boundary):
         else:
             return l*np.pi/self._L
 
-    def get_x_space_projection(self, l: int) -> Function_of_array:
+    def get_x_space_projection(self, l: int) -> Function_of_n:
         gamma = self._gamma
         L = self._L
         kl = self._l_kl_map.get_kl(l)
@@ -528,7 +528,7 @@ class Anti_Symmetric_Boundary(New_Style_Boundary):
 
         return real + 1j*imag
 
-    def get_k_space_projection(self, l: int) -> Function_of_array:
+    def get_k_space_projection(self, l: int) -> Function_of_n:
         gamma = self._gamma
         L = self._L
         kl = self._l_kl_map.get_kl(l)
@@ -548,15 +548,15 @@ class Anti_Symmetric_Boundary(New_Style_Boundary):
             
             return np.array(out)
         
-        return Function_of_array(converter)
+        return Function_of_n(converter)
 
     def discrete_momentum_projection_helper(self, l: int, n_array: np.ndarray) -> np.ndarray:
         kn_array = np.pi/self._L*n_array
         temp_k_space_proj = np.sqrt(np.pi/self._L)*self.get_k_space_projection(l)
         return temp_k_space_proj(kn_array)
 
-    def get_new_k_space_projection(self, l: int) -> Function_of_array:
-        return Function_of_array(lambda n: self.discrete_momentum_projection_helper(l, n))
+    def get_new_k_space_projection(self, l: int) -> Function_of_n:
+        return Function_of_n(lambda n: self.discrete_momentum_projection_helper(l, n))
 
     def get_pR_matrix_element(self, lhs_state: int, rhs_state: int) -> complex:
         gamma = self._gamma

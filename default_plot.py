@@ -136,3 +136,4 @@ class Multi_Plot:
 
         anim = FuncAnimation(fig, self.animate_frame, frames=int(num_frames), interval=int(1/fps*1000), blit=True)    
         return anim
+

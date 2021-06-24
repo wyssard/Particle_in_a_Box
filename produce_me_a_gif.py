@@ -23,8 +23,8 @@ l_0 = 100
 l_range = 15
 
 fps = 20
-speed = 0.025
-real_time = (4*m*L**2/np.pi)/4
+speed = 0.05
+real_time = (4*m*L**2/np.pi)/2
 time = real_time/speed
 
 
@@ -35,7 +35,7 @@ eps = 0.25
 
 x = np.linspace(-L/2, L/2, 300, endpoint=True)
 n_bound = l_0+l_range
-k_bound = myState.boundary_lib.get_kn(n_bound)
+k_bound = myState.boundary_lib.get_kn(n_bound*(1.001))
 n = np.arange(-n_bound, n_bound, 1, dtype=int)
 kn = myState.boundary_lib.get_kn(n)
 k = np.linspace(-k_bound, k_bound, 300, endpoint=True)
