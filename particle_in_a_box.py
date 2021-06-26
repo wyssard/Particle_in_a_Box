@@ -73,7 +73,6 @@ class State_Properties:
         self._gamma = new_gamma
         self._boudary_lib.set_gamma(new_gamma)
         
-        
     @property
     def L(self) -> float:
         """the length of the interval (box)"""
@@ -81,7 +80,6 @@ class State_Properties:
 
     @L.setter
     def L(self, new_L) -> None:
-        print("setting L...(state_properties)")
         self._L = new_L
         self._boudary_lib.set_L(new_L)
 
@@ -136,14 +134,12 @@ class Energy_Space_Projection:
     def empty_init(state_props: State_Properties) -> Energy_Space_Projection:
         return Energy_Space_Projection([], np.array([]), [], state_props)
 
-
     def normalize(self) -> None:
         if self._sp.num_energy_states == 0:
             self._Norm = 0
         else:
             self._Norm = np.sqrt(np.sum(np.power(np.abs(self._energy_proj_coeffs), 2)))
             self._energy_proj_coeffs = self._energy_proj_coeffs*(1/self._Norm)
-
 
     def change_coeff(self, the_state, the_coeff):
         the_index = self._sp.l_kl_map.get_index(the_state)
@@ -155,7 +151,8 @@ class Energy_Space_Projection:
         self._exp_value = 0
         for i in range(self._sp.num_energy_states):
             self._exp_value += (np.abs(self._energy_proj_coeffs[i])**2)*self._energies[i]
-        
+
+
 class New_Momentum_Space_Projection:
     def __init__(self, new_k_space_wavefunction: Function_of_n_and_t, new_k_space_single_energy_proj: list, state_properties: State_Properties) -> None:
         self._new_k_space_wavefunction = new_k_space_wavefunction
