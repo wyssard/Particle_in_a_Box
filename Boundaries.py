@@ -1,12 +1,10 @@
 from __future__ import annotations
-from unittest import TestCase
 
 from Backend import *
 from scipy.optimize import fsolve
 from scipy.optimize import brentq
 from scipy.integrate import quad
 from scipy.misc import derivative
-import sys
 
 
 class Symmetric_Boundary(New_Style_Boundary):
@@ -31,6 +29,7 @@ class Symmetric_Boundary(New_Style_Boundary):
         eps = self._eps
 
         if l == 0:
+
             if self._gamma > 0:
                 transc_eq = self._pos_energy_even_state_eq
                 kL_upper_bound = (l+1)*np.pi-eps
@@ -201,7 +200,7 @@ class Symmetric_Boundary(New_Style_Boundary):
 
                 norm_kappa = rhs_kappa*L/2
                 norm_k = lhs_k*L/2
-                norm_expr = np.sqrt((1 + lhs_sign*np.sin(lhs_k*L)/(lhs_k*L))*(rhs_sign + np.sinh(rhs_kappa*L)/(rhs_kappa)))
+                norm_expr = np.sqrt((1 + lhs_sign*np.sin(lhs_k*L)/(lhs_k*L))*(rhs_sign + np.sinh(rhs_kappa*L)/(rhs_kappa*L)))
                 
                 if rhs_state%2 == 0:
                     sin_cosh_expr = rhs_kappa*np.sin(norm_k)*np.cosh(norm_kappa)
@@ -212,7 +211,7 @@ class Symmetric_Boundary(New_Style_Boundary):
                     cos_sinh_expr = rhs_kappa*np.cos(norm_k)*np.sinh(norm_kappa)
                 
                 anti_symm_expr = 2/(lhs_k**2+rhs_kappa**2)*(sin_cosh_expr + cos_sinh_expr)
-                return (-1j*rhs_kappa)*(2/L)*anti_symm_expr/norm_kappa
+                return (-1j*rhs_kappa)*(2/L)*anti_symm_expr/norm_expr
 
         else:
             lhs_kappa = np.imag(lhs_k)

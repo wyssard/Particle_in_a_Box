@@ -81,7 +81,7 @@ class Position_Space_Plot(Updatable_Plot):
 
     def set_x_bound(self, new_bound: float) -> None:
         self.x_bound = new_bound
-        self.x = np.linspace(-self.x_bound, self.x_bound, self.res, endpoint=True)
+        self.x = np.linspace(-self.x_bound + 2*self.x_bound/self.res, self.x_bound, self.res-1, endpoint=False)
 
     def animate_frame(self, i):
         self.x_lines[0].set_data(self.x, np.abs(self.x_space_wavefunc(self.x, self.time_per_frame*i))**2)
@@ -239,3 +239,4 @@ class Expectation_Value_Plot:
         self.x_exp_line = self.axis.plot(time, self.x_exp_val(time), label=r"$\langle x \rangle$")
         self.k_exp_line = self.axis.plot(time, self.k_exp_val(time), label=r"$\langle p_R \rangle$")
         self.x_exp_deriv_line = self.axis.plot(time, self._state.m*self.x_exp_val_deriv(time), ls="--",label=r"$m \cdot \frac{d}{dt} \langle x \rangle$")
+

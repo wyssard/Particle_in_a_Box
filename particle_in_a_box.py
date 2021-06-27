@@ -376,7 +376,7 @@ class Particle_in_Box_State:
     @property
     def x_space_wavefunction(self) -> Function_of_n_and_t:
         L = self._sp.L
-        frame_function = Function_of_n(lambda x: np.heaviside(x+L/2, 0.5)*np.heaviside(L/2-x, 0.5))
+        frame_function = Function_of_n(lambda x: np.heaviside(x+L/2, 0)*np.heaviside(L/2-x, 0))
         return self._xsp._x_space_wavefunction*frame_function
 
     @property
