@@ -17,7 +17,7 @@ class State_Properties:
     def __init__(self, case: str, gamma: float, L: float, m: float) -> None:
         self._gamma = gamma
         self._L = L
-        self._m = m
+        self.m = m
         self._energy_states = []
         self._k_kappa_l_array = []
         self._num_energy_states = 0 
@@ -84,23 +84,14 @@ class State_Properties:
         self._boudary_lib.set_L(new_L)
 
     @property
-    def m(self) -> float:
-        """the mass of the particle"""
-        return self._m
-
-    @m.setter
-    def m(self, new_m) -> None:
-        self._m = new_m
-    
-    @property
     def num_energy_states(self) -> int:
         """the number of energy states the 'particle in a box'-state is 
         projected onto"""
         return self._num_energy_states
-    
+
     @num_energy_states.setter
-    def num_energy_states(self, new_num_energy_states) -> None:
-        self._num_energy_states = new_num_energy_states
+    def num_energy_states(self, value: int) -> None:
+        self._num_energy_states = value
 
     @property
     def energy_states(self) -> List[int]:
@@ -191,6 +182,7 @@ class New_Momentum_Space_Projection:
 
                 self._expectation_value += (coeff*wiggler*exp_val_component).get_real_part()
 
+
 class Momentum_Space_Projection:
     def __init__(self, cont_k_space_wavefunction: Function_of_n_and_t, cont_k_space_single_energy_proj: list, state_properties: State_Properties) -> None:
         self._cont_k_space_wavefunction = cont_k_space_wavefunction
@@ -206,6 +198,7 @@ class Momentum_Space_Projection:
         temp_wigglers = energy_space_proj._wiggle_factors
         for i in range(len(temp_proj_coeff)):
             self._cont_k_space_wavefunction += temp_proj_coeff[i]*self._cont_k_space_single_energy_proj[i]*temp_wigglers[i]
+
 
 class Position_Space_Projection:
     def __init__(self, x_space_wavefunction: Function_of_n_and_t, x_space_single_energy_proj: list, state_properties: State_Properties) -> None:

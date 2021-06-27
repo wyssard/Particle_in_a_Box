@@ -1,4 +1,5 @@
 from __future__ import annotations
+from unittest import TestCase
 
 from Backend import *
 from scipy.optimize import fsolve
@@ -113,10 +114,7 @@ class Symmetric_Boundary(New_Style_Boundary):
 
 
     def get_x_matrix_element(self, lhs_state: int, rhs_state: int) -> complex:
-        #print("computing x matrix element...")
-        #print("lhs_state: ", lhs_state, " rhs_state: ", rhs_state)
         if lhs_state%2 == rhs_state%2:
-            #print("terminating early")
             return 0
         
         if lhs_state%2 == 1:
@@ -124,13 +122,10 @@ class Symmetric_Boundary(New_Style_Boundary):
             lhs_state = rhs_state
             rhs_state = temp
 
-        ##print("compute <", lhs_state, "| x |", rhs_state, ">...")
-
         lhs_k = self._l_kl_map.get_kl(lhs_state)
         rhs_k = self._l_kl_map.get_kl(rhs_state)
         L = self._L
 
-        #print("rhs_k: ", rhs_k, "lhs_k: ", lhs_k)
 
         if np.imag(lhs_k) == 0:
             if np.imag(rhs_k) == 0:
@@ -141,13 +136,41 @@ class Symmetric_Boundary(New_Style_Boundary):
 
             else:
                 rhs_kappa = np.imag(rhs_k)
-                #print("Aborting Program: the case <l1|x|l2> where |l1> has positive and |l2> has negative energy is not yet implemented")
-                sys.exit()
+
+                norm_kappa = rhs_kappa*L/2
+                norm_k = lhs_k*L/2 
+
+                cos_cosh_expr = rhs_kappa*np.cos(norm_k)*np.cosh(norm_kappa)
+                sin_sinh_expr = lhs_k*np.sin(norm_k)*np.sinh(norm_kappa)
+                symm_expr = L/(rhs_kappa**2+lhs_k**2)*(sin_sinh_expr + cos_cosh_expr)
+
+                cos_sinh_expr = (lhs_k**2-rhs_kappa**2)*np.cos(norm_k)*np.sinh(norm_kappa)
+                sin_cosh_expr = 2*rhs_kappa*lhs_k*np.sin(norm_k)*np.cosh(norm_kappa)
+                anti_symm_expr = 2/((rhs_kappa**2+lhs_k**2)**2)*(cos_sinh_expr - sin_cosh_expr)
+
+                norm_expr = np.sqrt((1+np.sin(lhs_k*L)/(lhs_k*L))*(-1+np.sinh(rhs_kappa*L)/(rhs_kappa*L)))
+                
+                return (2/L)*(symm_expr + anti_symm_expr)/norm_expr
+                
         else:
             lhs_kappa = np.imag(lhs_k)
+
             if np.imag(rhs_k) == 0:
-                #print("Aborting Program: the case <l1|x|l2> where |l1> has negative and |l2> has positive energy is not yet implemented")
-                sys.exit()
+                norm_kappa = lhs_kappa*L/2
+                norm_k = rhs_k*L/2
+
+                norm_expr = np.sqrt((1-np.sin(rhs_k*L)/(rhs_k*L))*(1+np.sinh(lhs_kappa*L)/(lhs_kappa*L)))
+
+                sin_sinh_expr = lhs_kappa*np.sin(norm_k)*np.sinh(norm_kappa)
+                cos_cosh_expr = rhs_k*np.cos(norm_k)*np.cosh(norm_kappa)
+                symm_expr = L/(lhs_kappa**2+rhs_k**2)*(sin_sinh_expr - cos_cosh_expr)
+
+                cos_sinh_expr = 2*lhs_kappa*rhs_k*np.cos(norm_k)*np.sinh(norm_kappa)
+                sin_cosh_expr = (rhs_k**2-lhs_kappa**2)*np.sin(norm_k)*np.cosh(norm_kappa)
+                anti_symm_expr = 2/((rhs_k**2+lhs_kappa**2)**2)*(sin_cosh_expr + cos_sinh_expr)
+
+                return (2/L)*(symm_expr + anti_symm_expr)/norm_expr
+
             else:
                 rhs_kappa = np.imag(rhs_k)
                 cosh_expr = np.cosh((lhs_kappa+rhs_kappa)*L/2)/((lhs_kappa+rhs_kappa)*L) - np.cosh((lhs_kappa-rhs_kappa)*L/2)/((lhs_kappa-rhs_kappa)*L)
@@ -157,7 +180,6 @@ class Symmetric_Boundary(New_Style_Boundary):
 
 
     def get_pR_matrix_element(self, lhs_state: int, rhs_state: int) -> complex:
-        #print("computing p matrix element...")
         if lhs_state%2 == rhs_state%2:
             return 0
         
@@ -169,23 +191,49 @@ class Symmetric_Boundary(New_Style_Boundary):
 
         if np.imag(lhs_k) == 0:
             if np.imag(rhs_k) == 0:
-                norm_expr = np.sqrt((1 + lhs_sign*np.sin(lhs_k*L)/(lhs_k*L))*(1 + rhs_sign*np.sin(rhs_k*L)/rhs_k*L))
+
+                norm_expr = np.sqrt((1 + lhs_sign*np.sin(lhs_k*L)/(lhs_k*L))*(1 + rhs_sign*np.sin(rhs_k*L)/(rhs_k*L)))
                 sin_expr = np.sin((lhs_k+rhs_k)*L/2)/((lhs_k+rhs_k)*L) + lhs_sign*np.sin((lhs_k-rhs_k)*L/2)/((lhs_k-rhs_k)*L)
                 return (-2j)*rhs_k*sin_expr/norm_expr
 
             else:
                 rhs_kappa = np.imag(rhs_k)
-                #print("Aborting Program: the case <l1|x|l2> where |l1> has positive and |l2> has negative energy is not yet implemented")
-                sys.exit()
+
+                norm_kappa = rhs_kappa*L/2
+                norm_k = lhs_k*L/2
+                norm_expr = np.sqrt((1 + lhs_sign*np.sin(lhs_k*L)/(lhs_k*L))*(rhs_sign + np.sinh(rhs_kappa*L)/(rhs_kappa)))
+                
+                if rhs_state%2 == 0:
+                    sin_cosh_expr = rhs_kappa*np.sin(norm_k)*np.cosh(norm_kappa)
+                    cos_sinh_expr = -lhs_k*np.cos(norm_k)*np.sinh(norm_kappa)
+
+                else:
+                    sin_cosh_expr = lhs_k*np.sin(norm_k)*np.cosh(norm_kappa)
+                    cos_sinh_expr = rhs_kappa*np.cos(norm_k)*np.sinh(norm_kappa)
+                
+                anti_symm_expr = 2/(lhs_k**2+rhs_kappa**2)*(sin_cosh_expr + cos_sinh_expr)
+                return (-1j*rhs_kappa)*(2/L)*anti_symm_expr/norm_kappa
 
         else:
             lhs_kappa = np.imag(lhs_k)
             if np.imag(rhs_k) == 0:
-                #print("Aborting Program: the case <l1|x|l2> where |l1> has negative and |l2> has positive energy is not yet implemented")
-                sys.exit()
+                norm_kappa = lhs_kappa*L/2
+                norm_k = rhs_k*L/2
 
+                norm_expr = np.sqrt((1 + rhs_sign*np.sin(rhs_k*L)/(rhs_k*L))*(lhs_sign + np.sinh(lhs_kappa*L)/(lhs_kappa*L)))
+                if lhs_state%2 == 0:
+                    sin_cosh_expr = rhs_k*np.sin(norm_k)*np.cosh(norm_kappa)
+                    cos_sinh_expr = lhs_kappa*np.cos(norm_k)*np.sinh(norm_kappa)
+
+                else:                 
+                    sin_cosh_expr = lhs_kappa*np.sin(norm_k)*np.cosh(norm_kappa)
+                    cos_sinh_expr = -rhs_k*np.cos(norm_k)*np.sinh(norm_kappa)
+
+                anti_symm_expr = 2/(lhs_kappa**2+rhs_k**2)*(sin_cosh_expr + cos_sinh_expr)
+                return (rhs_sign*1j*rhs_k)*(2/L)*anti_symm_expr/norm_expr
+
+                
             else:
-
                 rhs_kappa = np.imag(rhs_k)
                 norm_expr = np.sqrt((lhs_sign + np.sinh(lhs_kappa*L)/(lhs_kappa*L))*(rhs_sign + np.sinh(rhs_kappa*L)/(rhs_kappa*L)))
                 sinh_expr = np.sinh((lhs_kappa+rhs_kappa)*L/2)/((lhs_kappa+rhs_kappa)*L) + lhs_sign*np.sinh((lhs_kappa-rhs_kappa)*L/2)/((lhs_kappa-rhs_kappa)*L)
