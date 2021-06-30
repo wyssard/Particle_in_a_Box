@@ -63,7 +63,7 @@ class Position_Space_Plot(Updatable_Plot):
         self._state = state
         self.set_x_bound(state.L/2)
         self.axis.set_xlabel(r"$x$")
-        self.axis.set_ylabel(r"$\left\langle x \vert \Psi(t) \right\rangle$")
+        self.axis.set_ylabel(r"$\left\vert\left\langle x \vert \Psi(t) \right\rangle\right\vert^2$")
         self.update()
 
     def update(self):
@@ -104,7 +104,6 @@ class Momentum_Space_Plot(Updatable_Plot):
         self.update()
 
         self.set_n_bound(15)
-        self.axis.set_ylim([0, 0.75])
 
     def update(self):
         self.k_space_wavefunc = self._state.k_space_wavefunction
@@ -113,7 +112,7 @@ class Momentum_Space_Plot(Updatable_Plot):
 
     def set_n_bound(self, new_bound: int) -> None:
         self.n_bound = new_bound
-        self.n = np.arange(-self.n_bound, self.n_bound, 1, dtype=int)
+        self.n = np.arange(-self.n_bound, self.n_bound+1, 1, dtype=int)
         self.kn = self._state.boundary_lib.get_kn(self.n)
         self.k_bound = self._state.boundary_lib.get_kn(self.n_bound*(1.001))
         self.k = np.linspace(-self.k_bound, self.k_bound, self.res, endpoint=True)

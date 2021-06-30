@@ -95,6 +95,7 @@ class Symmetric_Boundary(New_Style_Boundary):
         
 
     def get_k_space_projection(self, l: int) -> Function_of_n:
+        #print("computing the k_space_projection using analytic results...")
         L = self._L
         kl = self._l_kl_map.get_kl(l)
 
@@ -109,7 +110,7 @@ class Symmetric_Boundary(New_Style_Boundary):
                 return Function_of_n(lambda k: np.sqrt(L/np.pi)/np.sqrt(1 + np.sin(kl*L)/(kl*L))*(np.sin((kl+k)*L/2)/(kl*L+k*L) + np.sin((kl-k)*L/2)/(kl*L-k*L)))
             else:
                 kappal = np.imag(kl)
-                return Function_of_n(lambda k: (2)*np.sqrt(L/np.pi)/np.sqrt(1+np.sinh(kappal*L)/(kappal*L))*(k*L*np.cos(k*L/2)*np.sinh(kappal*L/2) + kappal*L*np.sin(k*L/2)*np.cosh(kappal*L/2))/((kappal*L)**2+(k*L)**2))
+                return Function_of_n(lambda k: (2)*np.sqrt(L/np.pi)/np.sqrt(1+np.sinh(kappal*L)/(kappal*L))*(kappal*L*np.cos(k*L/2)*np.sinh(kappal*L/2) + k*L*np.sin(k*L/2)*np.cosh(kappal*L/2))/((kappal*L)**2+(k*L)**2))
 
 
     def get_x_matrix_element(self, lhs_state: int, rhs_state: int) -> complex:
@@ -179,6 +180,7 @@ class Symmetric_Boundary(New_Style_Boundary):
 
 
     def get_pR_matrix_element(self, lhs_state: int, rhs_state: int) -> complex:
+        #print("computing the pR elements using analytic results...")
         if lhs_state%2 == rhs_state%2:
             return 0
         
@@ -248,7 +250,7 @@ class Symmetric_Boundary(New_Style_Boundary):
     def get_new_k_space_projection(self, l: int) -> Function_of_n:
         return Function_of_n(lambda n: self.discrete_momentum_projection_helper(l, n))
 
-
+    
 class Neumann_Boudnary(New_Style_Boundary):
     def __init__(self, L: float, gamma: float, l_to_kl_mapper_ref: l_to_kl_mapper) -> None:
         super().__init__(L, gamma, l_to_kl_mapper_ref)
@@ -323,7 +325,7 @@ class Neumann_Boudnary(New_Style_Boundary):
             return 2j/L*(-1)**((lhs_state+rhs_state-1)/2)*(lhs_state**2 + rhs_state**2)/(lhs_state**2 - rhs_state**2)
 
 
-    def discrete_momemntum_projection_helper(self, l: int, n_array: np.ndarray) -> np.ndarray:
+    def discrete_momentum_projection_helper(self, l: int, n_array: np.ndarray) -> np.ndarray:
         if isinstance(n_array, int):
             n_array = [n_array]
 
@@ -369,7 +371,7 @@ class Neumann_Boudnary(New_Style_Boundary):
 
 
     def get_new_k_space_projection(self, l: int) -> Function_of_n:
-        return Function_of_n(lambda n: self.discrete_momemntum_projection_helper(l, n))
+        return Function_of_n(lambda n: self.discrete_momentum_projection_helper(l, n))
 
 
 class Dirichlet_Boundary(New_Style_Boundary):
@@ -622,4 +624,47 @@ class Anti_Symmetric_Boundary(New_Style_Boundary):
 
 
         return real + 1j*imag
+    
+
+class Symmetric_Nummeric(Symmetric_Boundary):
+    def __init__(self, L: float, gamma: float, l_to_kl_mapper_ref: l_to_kl_mapper) -> None:
+        super().__init__(L, gamma, l_to_kl_mapper_ref)
+        self._n_range = 100
+
+    def get_pR_matrix_element(self, lhs_state: int, rhs_state: int) -> complex:
+        lhs_proj_coeffs = self.get_new_k_space_projection(lhs_state)
+        rhs_proj_coeffs = self.get_new_k_space_projection(rhs_state)
         
+        n_center = max(lhs_state, rhs_state)
+        n_range_u = self._n_range
+        n_range_d = self._n_range if n_center > self._n_range else n_center
+        n_p = np.arange(n_center-n_range_d+1, n_center+n_range_u+1, 1)
+        n_n = np.arange(-n_center-n_range_u, -n_center+n_range_d+1, 1)
+        n = np.append(n_n, n_p)
+        
+        return np.pi/self._L*np.sum(n*np.conj(lhs_proj_coeffs(n))*rhs_proj_coeffs(n))
+
+    def set_n_range(self, new_n_range) -> None:
+        self._n_range = new_n_range
+
+
+class Anti_Symmetric_Nummeric(Anti_Symmetric_Boundary):
+    def __init__(self, L: float, gamma: float, l_to_kl_mapper_ref: l_to_kl_mapper) -> None:
+        super().__init__(L, gamma, l_to_kl_mapper_ref)
+        self._n_range = 100
+
+    def get_pR_matrix_element(self, lhs_state: int, rhs_state: int) -> complex:
+        lhs_proj_coeffs = self.get_new_k_space_projection(lhs_state)
+        rhs_proj_coeffs = self.get_new_k_space_projection(rhs_state)
+        
+        n_center = max(lhs_state, rhs_state)
+        n_range_u = self._n_range
+        n_range_d = self._n_range if n_center > self._n_range else n_center
+        n_p = np.arange(n_center-n_range_d+1, n_center+n_range_u+1, 1)
+        n_n = np.arange(-n_center-n_range_u, -n_center+n_range_d+1, 1)
+        n = np.append(n_n, n_p)
+        
+        return np.pi/self._L*np.sum(n*np.conj(lhs_proj_coeffs(n))*rhs_proj_coeffs(n))
+
+    def set_n_range(self, new_n_range) -> None:
+        self._n_range = new_n_range

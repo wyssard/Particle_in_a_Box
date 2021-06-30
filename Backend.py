@@ -36,13 +36,13 @@ class Function_Base(ABC):
         return self.__mul__(other)
 
     @abstractmethod
-    def get_real_part(self):
+    def get_real_part(self) -> Function_Base:
         """return a new instance of <Function_Base> that only contains the
         real part of the function"""
         pass
 
     @abstractmethod
-    def get_imag_part(self):
+    def get_imag_part(self) -> Function_Base:
         """return a new instance of <Function_Base> that only contains the
         imaginary part of the function"""
         pass

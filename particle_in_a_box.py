@@ -30,19 +30,25 @@ class State_Properties:
          
     def switch_case(self, case: str):
         if case == "symmetric":
-            self._boudary_lib = Boundaries.Symmetric_Boundary(self._L, self._gamma, self._l_kl_map)
+            self._boundary_lib = Boundaries.Symmetric_Boundary(self._L, self._gamma, self._l_kl_map)
         
         elif case == "neumann":
-            self._boudary_lib = Boundaries.Neumann_Boudnary(self._L, self._gamma, self._l_kl_map)
+            self._boundary_lib = Boundaries.Neumann_Boudnary(self._L, self._gamma, self._l_kl_map)
 
         elif case == "dirichlet":
-            self._boudary_lib = Boundaries.Dirichlet_Boundary(self._L, self._gamma, self._l_kl_map)
+            self._boundary_lib = Boundaries.Dirichlet_Boundary(self._L, self._gamma, self._l_kl_map)
 
         elif case == "dirichlet_neumann":
-            self._boudary_lib = Boundaries.Dirichlet_Neumann_Boundary(self._L, self._gamma, self._l_kl_map)
+            self._boundary_lib = Boundaries.Dirichlet_Neumann_Boundary(self._L, self._gamma, self._l_kl_map)
 
         elif case == "anti_symmetric":
-            self._boudary_lib = Boundaries.Anti_Symmetric_Boundary(self._L, self._gamma, self._l_kl_map)
+            self._boundary_lib = Boundaries.Anti_Symmetric_Boundary(self._L, self._gamma, self._l_kl_map)
+
+        elif case == "symmetric_nummeric":
+            self._boundary_lib = Boundaries.Symmetric_Nummeric(self._L, self._gamma, self._l_kl_map)
+
+        elif case == "anti_symmetric_nummeric":
+            self._boundary_lib = Boundaries.Anti_Symmetric_Nummeric(self._L, self._gamma, self._l_kl_map)
 
     @property
     def case(self) -> str:
@@ -59,7 +65,7 @@ class State_Properties:
     def boundary_lib(self) -> New_Style_Boundary:
         """object of type 'New_Style_Boundary' containing all the funcionality
         that specifically depends on the choice of the boundary condition'"""
-        return self._boudary_lib
+        return self._boundary_lib
 
     @property
     def gamma(self) -> float:
@@ -71,7 +77,7 @@ class State_Properties:
     @gamma.setter
     def gamma(self, new_gamma) -> None:
         self._gamma = new_gamma
-        self._boudary_lib.set_gamma(new_gamma)
+        self._boundary_lib.set_gamma(new_gamma)
         
     @property
     def L(self) -> float:
@@ -81,7 +87,7 @@ class State_Properties:
     @L.setter
     def L(self, new_L) -> None:
         self._L = new_L
-        self._boudary_lib.set_L(new_L)
+        self._boundary_lib.set_L(new_L)
 
     @property
     def num_energy_states(self) -> int:
@@ -237,7 +243,7 @@ class Position_Space_Projection:
 
                 exp_val_component = self._sp.boundary_lib.get_x_matrix_element(lh_state, rh_state) 
                 coeff = complex(np.conj(lh_coeff)*rh_coeff)
-                append = wiggler*coeff
+                append = coeff*wiggler
 
                 self._expectation_value += (2*append*exp_val_component).get_real_part()
                 self._exp_t_deriv += (2*(rh_energy-lh_energy)*append*exp_val_component).get_imag_part()
