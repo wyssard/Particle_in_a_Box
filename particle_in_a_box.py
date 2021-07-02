@@ -27,7 +27,10 @@ class State_Properties:
         self._case = case
         self.switch_case(case)
 
-         
+        # Experimental
+        self._theta = 0
+        
+
     def switch_case(self, case: str):
         if case == "symmetric":
             self._boundary_lib = Boundaries.Symmetric_Boundary(self._L, self._gamma, self._l_kl_map)
@@ -49,6 +52,9 @@ class State_Properties:
 
         elif case == "anti_symmetric_nummeric":
             self._boundary_lib = Boundaries.Anti_Symmetric_Nummeric(self._L, self._gamma, self._l_kl_map)
+
+        elif case == "dirichlet_neumann_nummeric":
+            self._boundary_lib = Boundaries.Dririchlet_Neumann_Nummeric(self._L, self._gamma, self._l_kl_map)
 
     @property
     def case(self) -> str:
@@ -79,6 +85,15 @@ class State_Properties:
         self._gamma = new_gamma
         self._boundary_lib.set_gamma(new_gamma)
         
+    @property
+    def theta(self) -> float:
+        return self._theta
+
+    @theta.setter
+    def theta(self, new_theta: float) -> None:
+        self._theta = new_theta
+        self.boundary_lib.set_theta(new_theta)
+
     @property
     def L(self) -> float:
         """the length of the interval (box)"""
@@ -258,7 +273,7 @@ class Position_Space_Projection:
 
 
 class Particle_in_Box_State:
-    def __init__(self, case: str, L: float, m: float, energy_states = [], amplitudes = np.array([]), gamma=None) -> None:
+    def __init__(self, case: str, L: float, m: float, energy_states: list = [], amplitudes: np.ndarray = np.array([]), gamma: float =None) -> None:
         self._sp = State_Properties(case, gamma, L, m)
 
         self._esp = Energy_Space_Projection.empty_init(self._sp)
@@ -267,7 +282,6 @@ class Particle_in_Box_State:
         self._new_ksp = New_Momentum_Space_Projection.empty_init(self._sp)
 
         self.add_state(energy_states, amplitudes)
-
 
     def change_energy_proj_coeff(self, the_state: int, the_coeff: complex) -> None:
         self._esp.change_coeff(the_state, the_coeff)
@@ -378,7 +392,6 @@ class Particle_in_Box_State:
         self._ksp.combine_wavefunction_components(self._esp)
         self._new_ksp.combine_wavefunction_components(self._esp)
 
-
     @property
     def x_space_wavefunction(self) -> Function_of_n_and_t:
         L = self._sp.L
@@ -434,6 +447,15 @@ class Particle_in_Box_State:
     @gamma.setter
     def gamma(self, new_gamma: float) -> None:
         self._sp.gamma = new_gamma
+        self.full_projection_recompute()
+
+    @property
+    def theta(self) -> float:
+        return self._sp.theta
+
+    @theta.setter
+    def theta(self, new_theta: float) -> None:
+        self._sp.theta = new_theta
         self.full_projection_recompute()
 
     @property

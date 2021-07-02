@@ -5,6 +5,7 @@ from scipy.optimize import fsolve
 from scipy.optimize import brentq
 from scipy.integrate import quad
 from scipy.misc import derivative
+import warnings
 
 
 class Symmetric_Boundary(New_Style_Boundary):
@@ -17,12 +18,11 @@ class Symmetric_Boundary(New_Style_Boundary):
 
         self._eps = np.finfo(np.float32).eps
 
-
     def set_eps(self, new_eps: float) -> None:
         self._eps = new_eps
 
     def get_kn(self, n: int | np.ndarray) -> float | np.ndarray:
-        return n*np.pi/self._L
+        return n*np.pi/self._L + self._theta/(2*self._L)
 
     def get_kl(self, l: int) -> complex:
         gammaL = self._gamma*self._L
@@ -76,7 +76,6 @@ class Symmetric_Boundary(New_Style_Boundary):
         
         pass
 
-
     def get_x_space_projection(self, l: int) -> Function_of_n:
         L = self._L
         kl = self._l_kl_map.get_kl(l)
@@ -93,7 +92,6 @@ class Symmetric_Boundary(New_Style_Boundary):
                 kappal = np.imag(kl)
                 return Function_of_n(lambda x: np.sqrt(2/L)*np.power(1+np.sinh(kappal*L)/(kappal*L), -1/2)*np.cosh(kappal*x))
         
-
     def get_k_space_projection(self, l: int) -> Function_of_n:
         #print("computing the k_space_projection using analytic results...")
         L = self._L
@@ -111,7 +109,6 @@ class Symmetric_Boundary(New_Style_Boundary):
             else:
                 kappal = np.imag(kl)
                 return Function_of_n(lambda k: (2)*np.sqrt(L/np.pi)/np.sqrt(1+np.sinh(kappal*L)/(kappal*L))*(kappal*L*np.cos(k*L/2)*np.sinh(kappal*L/2) + k*L*np.sin(k*L/2)*np.cosh(kappal*L/2))/((kappal*L)**2+(k*L)**2))
-
 
     def get_x_matrix_element(self, lhs_state: int, rhs_state: int) -> complex:
         if lhs_state%2 == rhs_state%2:
@@ -178,7 +175,6 @@ class Symmetric_Boundary(New_Style_Boundary):
                 norm_expr = np.sqrt((1+np.sinh(lhs_kappa*L)/(lhs_kappa*L))*(-1+np.sinh(rhs_kappa*L)/(rhs_kappa*L)))
                 return (cosh_expr + 2*sinh_expr)/norm_expr*L
 
-
     def get_pR_matrix_element(self, lhs_state: int, rhs_state: int) -> complex:
         #print("computing the pR elements using analytic results...")
         if lhs_state%2 == rhs_state%2:
@@ -240,12 +236,10 @@ class Symmetric_Boundary(New_Style_Boundary):
                 sinh_expr = np.sinh((lhs_kappa+rhs_kappa)*L/2)/((lhs_kappa+rhs_kappa)*L) + lhs_sign*np.sinh((lhs_kappa-rhs_kappa)*L/2)/((lhs_kappa-rhs_kappa)*L)
                 return (-2j)*rhs_kappa*sinh_expr/norm_expr
 
-
     def discrete_momentum_projection_helper(self, l: int, n_array: np.ndarray) -> np.ndarray:
-        kn_array = np.pi/self._L*n_array
+        kn_array = self.get_kn(n_array)
         temp_k_space_proj = np.sqrt(np.pi/self._L)*self.get_k_space_projection(l)
         return temp_k_space_proj(kn_array)
-
 
     def get_new_k_space_projection(self, l: int) -> Function_of_n:
         return Function_of_n(lambda n: self.discrete_momentum_projection_helper(l, n))
@@ -261,7 +255,6 @@ class Neumann_Boudnary(New_Style_Boundary):
     def get_kl(self, l: int) -> complex:
         return l*np.pi/self._L
 
-
     def get_x_space_projection(self, l: int) -> Function_of_n:
         L = self._L
         if l == 0:
@@ -271,7 +264,6 @@ class Neumann_Boudnary(New_Style_Boundary):
                 return Function_of_n(lambda x: np.sqrt(2/L)*np.cos(l*np.pi/L*x))
             else:
                 return Function_of_n(lambda x: np.sqrt(2/L)*np.sin(l*np.pi/L*x))
-
 
     def get_x_matrix_element(self, lhs_state: int, rhs_state: int) -> complex:
         if lhs_state%2 == rhs_state%2:
@@ -290,7 +282,6 @@ class Neumann_Boudnary(New_Style_Boundary):
         else:
             return (2*L/np.pi**2)*(-1)**((lhs_state+rhs_state-1)/2)*2*(lhs_state**2 + rhs_state**2)/(lhs_state**2 - rhs_state**2)**2
 
-
     def get_k_space_projection(self, l: int) -> Function_of_n:
         L = self._L
 
@@ -302,7 +293,6 @@ class Neumann_Boudnary(New_Style_Boundary):
 
         else:
             return Function_of_n(lambda k: 1j*np.sqrt(L/np.pi)*(np.sin(l*np.pi/2 + k*L/2)/(l*np.pi + k*L) - np.sin(l*np.pi/2 - k*L/2)/(l*np.pi - k*L)))
-
 
     def get_pR_matrix_element(self, lhs_state: int, rhs_state: int) -> complex:
         L = self._L
@@ -323,7 +313,6 @@ class Neumann_Boudnary(New_Style_Boundary):
             # The only case that reamains is when neither rhs_state = 0 nor 
             # lhs_state = 0 and lhs_state%2 != rhs_state%2
             return 2j/L*(-1)**((lhs_state+rhs_state-1)/2)*(lhs_state**2 + rhs_state**2)/(lhs_state**2 - rhs_state**2)
-
 
     def discrete_momentum_projection_helper(self, l: int, n_array: np.ndarray) -> np.ndarray:
         if isinstance(n_array, int):
@@ -369,9 +358,12 @@ class Neumann_Boudnary(New_Style_Boundary):
             
             return np.array(projection_coefficients)
 
-
     def get_new_k_space_projection(self, l: int) -> Function_of_n:
         return Function_of_n(lambda n: self.discrete_momentum_projection_helper(l, n))
+
+    def set_theta(self, new_theta: float) -> None:
+        super().set_theta(new_theta)
+        warnings.warn("setting theta has not been implemented for pure Neumann boundaries yet and will thus have no effect")
 
 
 class Dirichlet_Boundary(New_Style_Boundary):
@@ -400,7 +392,6 @@ class Dirichlet_Boundary(New_Style_Boundary):
             sign_expr = (-1)**((lhs_state+rhs_state-1)/2)
             return (2*L/np.pi**2)*sign_expr*(4*(lhs_state+1)*(rhs_state+1))/((lhs_state+1)**2 - (rhs_state+1)**2)**2      
         
-        
     def get_pR_matrix_element(self, lhs_state: int, rhs_state: int) -> complex:
         if lhs_state%2 == rhs_state%2:
             return 0
@@ -409,7 +400,6 @@ class Dirichlet_Boundary(New_Style_Boundary):
             L = self._L
             sign_expr = (-1)**((lhs_state+rhs_state-1)/2)
             return 1j/L*sign_expr*(4*(lhs_state+1)*(rhs_state+1))/((lhs_state+1)**2 - (rhs_state+1)**2)
-
 
     def get_k_space_projection(self, l: int) -> Function_of_n:
         L = self._L
@@ -450,15 +440,17 @@ class Dirichlet_Boundary(New_Style_Boundary):
             
             return np.array(projection_coefficients)
 
-
     def get_new_k_space_projection(self, l: int) -> Function_of_n:
         return Function_of_n(lambda n: self.discrete_momentum_projection_helper(l, n))
+
+    def set_theta(self, new_theta: float) -> None:
+        super().set_theta(new_theta)
+        warnings.warn("setting theta has not been implemented for pure Dirichlet boundaries yet and will thus have no effect")
 
 
 class Dirichlet_Neumann_Boundary(New_Style_Boundary):
     def __init__(self, L: float, gamma: float, l_to_kl_mapper_ref: l_to_kl_mapper) -> None:
         super().__init__(L, gamma, l_to_kl_mapper_ref)
-
 
     def get_kn(self, n: int | list) -> float | list:
         return (n+1/2)*np.pi/self._L
@@ -466,7 +458,6 @@ class Dirichlet_Neumann_Boundary(New_Style_Boundary):
     def get_kl(self, l: int) -> complex:
         return (2*l+1)/2*np.pi/self._L
     
-
     def get_x_space_projection(self, l: int) -> Function_of_n:
         L = self._L
         kl = self._l_kl_map.get_kl(l)
@@ -479,7 +470,6 @@ class Dirichlet_Neumann_Boundary(New_Style_Boundary):
         rhs_term = Function_of_n(lambda k: np.sin((kl-k)*L/2)/((kl-k)*L)*np.exp(1j*(2*l+1)*np.pi/4))
         return 1j*np.sqrt(L/np.pi)*(lhs_term - rhs_term)
 
-    
     def discrete_momentum_projection_helper(self, l: int, n_array: np.ndarray) -> np.ndarray:
         if isinstance(n_array, int):
             n_array = [n_array]
@@ -506,11 +496,9 @@ class Dirichlet_Neumann_Boundary(New_Style_Boundary):
         
         return np.array(projection_coefficients)
 
-
     def get_new_k_space_projection(self, l: int) -> Function_of_n:
         return Function_of_n(lambda n: self.discrete_momentum_projection_helper(l, n))
 
-    
     def get_x_matrix_element(self, lhs_state: int, rhs_state: int) -> complex:
         L = self._L
        
@@ -519,7 +507,6 @@ class Dirichlet_Neumann_Boundary(New_Style_Boundary):
         else:
             return -(2*L/np.pi**2)/(lhs_state-rhs_state)**2
 
-    
     def get_pR_matrix_element(self, lhs_state: int, rhs_state: int) -> complex:
         L = self._L
 
@@ -527,6 +514,10 @@ class Dirichlet_Neumann_Boundary(New_Style_Boundary):
             return 1j/L*(lhs_state-rhs_state)/(lhs_state+rhs_state+1)
         else:
             return 1j/L*(lhs_state+rhs_state+1)/(rhs_state-lhs_state)
+
+    def set_theta(self, new_theta: float) -> None:
+        super().set_theta(new_theta)
+        warnings.warn("setting theta has not been implemented for Dirichlet Neumann boundaries yet and will thus have no effect")
 
 
 class Anti_Symmetric_Boundary(New_Style_Boundary):
@@ -547,7 +538,7 @@ class Anti_Symmetric_Boundary(New_Style_Boundary):
             return Function_of_n(lambda x: np.sqrt(kappal/np.sinh(kappal*L))*np.exp(-gamma*x))
 
     def get_kn(self, n: int | list) -> float | list:
-        return n*np.pi/self._L
+        return n*np.pi/self._L + self._theta/(2*self._L)
 
     def get_kl(self, l: int) -> complex:
         if l == 0:
@@ -600,7 +591,7 @@ class Anti_Symmetric_Boundary(New_Style_Boundary):
         return Function_of_n(converter)
 
     def discrete_momentum_projection_helper(self, l: int, n_array: np.ndarray) -> np.ndarray:
-        kn_array = np.pi/self._L*n_array
+        kn_array = self.get_kn(n_array)
         temp_k_space_proj = np.sqrt(np.pi/self._L)*self.get_k_space_projection(l)
         return temp_k_space_proj(kn_array)
 
@@ -632,17 +623,27 @@ class Symmetric_Nummeric(Symmetric_Boundary):
         self._n_range = 100
 
     def get_pR_matrix_element(self, lhs_state: int, rhs_state: int) -> complex:
+        # This implementation of the <get_pR_matrix_element> method determines
+        # the matrix elements <l|pR|l'> by expanding the energy states in the
+        # momentum eigenbasis such that the matrix elements are obtained by
+        # summing over all momentum states.
+
         lhs_proj_coeffs = self.get_new_k_space_projection(lhs_state)
         rhs_proj_coeffs = self.get_new_k_space_projection(rhs_state)
         
-        n_center = max(lhs_state, rhs_state)
-        n_range_u = self._n_range
-        n_range_d = self._n_range if n_center > self._n_range else n_center
+        # Construction of one or two intervals of momentum quantum numbers that
+        # are taken as samples to approximate the infinite sum given in
+        # <l|pR|l'> if expanded in the momentum basis. 
+        n_center = (lhs_state+rhs_state)//2
+        n_range_adapted = abs(lhs_state-rhs_state)//2+self._n_range
+        n_range_u = n_range_adapted
+        n_range_d = n_range_adapted if n_center > n_range_adapted else n_center
+
         n_p = np.arange(n_center-n_range_d+1, n_center+n_range_u+1, 1)
         n_n = np.arange(-n_center-n_range_u, -n_center+n_range_d+1, 1)
         n = np.append(n_n, n_p)
         
-        return np.pi/self._L*np.sum(n*np.conj(lhs_proj_coeffs(n))*rhs_proj_coeffs(n))
+        return np.sum(self.get_kn(n)*np.conj(lhs_proj_coeffs(n))*rhs_proj_coeffs(n))
 
     def set_n_range(self, new_n_range) -> None:
         self._n_range = new_n_range
@@ -664,7 +665,7 @@ class Anti_Symmetric_Nummeric(Anti_Symmetric_Boundary):
         n_n = np.arange(-n_center-n_range_u, -n_center+n_range_d+1, 1)
         n = np.append(n_n, n_p)
         
-        return np.pi/self._L*np.sum(n*np.conj(lhs_proj_coeffs(n))*rhs_proj_coeffs(n))
+        return np.sum(self.get_kn(n)*np.conj(lhs_proj_coeffs(n))*rhs_proj_coeffs(n))
 
     def set_n_range(self, new_n_range) -> None:
         self._n_range = new_n_range

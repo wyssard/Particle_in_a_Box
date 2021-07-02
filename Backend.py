@@ -310,6 +310,7 @@ class New_Style_Boundary(ABC):
         self._L = L
         self._gamma = gamma
         self._l_kl_map = l_to_kl_mapper_ref
+        self._theta = 0
 
     @abstractmethod
     def get_kn(self, n: int | list) -> float | list:
@@ -376,3 +377,6 @@ class New_Style_Boundary(ABC):
 
     def set_gamma(self, new_gamma: float) -> None:
         self._gamma = new_gamma
+
+    def set_theta(self, new_theta: float) -> None:
+        self._theta = new_theta

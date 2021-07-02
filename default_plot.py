@@ -18,7 +18,6 @@ class Updatable_Plot(ABC):
         self._state = state
         self.expectation_value = False
         self.res = 300
-        self.update()
 
     @abstractmethod
     def update(self):
@@ -101,24 +100,23 @@ class Momentum_Space_Plot(Updatable_Plot):
         self._state = state
         self.axis.set_xlabel(r"$k$, $k_n$")
         self.axis.set_ylabel("Probability Distribution/Density")
-        self.update()
-
         self.set_n_bound(15)
+        self.update()
 
     def update(self):
         self.k_space_wavefunc = self._state.k_space_wavefunction
         self.new_k_space_wavefunc = self._state.new_k_space_wavefunction
         self.k_exp_val = self._state.new_k_space_expectation_value
 
+        self.kn = self._state.boundary_lib.get_kn(self.n)
+        self.bar_width =  0.8*(self.kn[0]-self.kn[1])
+        self.k_bound = self._state.boundary_lib.get_kn(self.n_bound*(1.001))
+        self.k = np.linspace(-self.k_bound, self.k_bound, self.res, endpoint=True)
+
     def set_n_bound(self, new_bound: int) -> None:
         self.n_bound = new_bound
         self.n = np.arange(-self.n_bound, self.n_bound+1, 1, dtype=int)
-        self.kn = self._state.boundary_lib.get_kn(self.n)
-        self.k_bound = self._state.boundary_lib.get_kn(self.n_bound*(1.001))
-        self.k = np.linspace(-self.k_bound, self.k_bound, self.res, endpoint=True)
         
-        self.bar_width =  0.8*(self.kn[0]-self.kn[1])
-
     def plot(self, time: float | np.ndarray):
         super().plot()
         self.k_lines = self.axis.plot(self.k, np.abs(self.k_space_wavefunc(self.k, time))**2, animated=True, color = self._dark_color,
