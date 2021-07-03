@@ -69,6 +69,8 @@ class Position_Space_Plot(Updatable_Plot):
         self.x_space_wavefunc = self._state.x_space_wavefunction
         self.x_exp_val = self._state.x_space_expectation_value
 
+        self.x = np.linspace(-self.x_bound + 2*self.x_bound/self.res, self.x_bound, self.res-1, endpoint=False)
+
     def plot(self, time: float) -> None:
         super().plot()
         self.x_lines = self.axis.plot(self.x, np.abs(self.x_space_wavefunc(self.x, time))**2, animated=True, color = self._dark_color,
@@ -80,7 +82,7 @@ class Position_Space_Plot(Updatable_Plot):
 
     def set_x_bound(self, new_bound: float) -> None:
         self.x_bound = new_bound
-        self.x = np.linspace(-self.x_bound + 2*self.x_bound/self.res, self.x_bound, self.res-1, endpoint=False)
+        
 
     def animate_frame(self, i):
         self.x_lines[0].set_data(self.x, np.abs(self.x_space_wavefunc(self.x, self.time_per_frame*i))**2)

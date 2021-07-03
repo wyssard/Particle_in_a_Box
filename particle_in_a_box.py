@@ -322,7 +322,7 @@ class Particle_in_Box_State:
         self._esp._energy_proj_coeffs = (self._esp._energy_proj_coeffs*(self._esp._Norm)).tolist()
         
         for state in the_states:
-            if  state not in self._sp.energy_states:
+            if  (state not in self._sp.energy_states) and (state >= 0):
                 self._sp.num_energy_states += 1
                 self._esp._energy_proj_coeffs.append(the_energy_proj_coeffs[the_states.index(state)])
 
