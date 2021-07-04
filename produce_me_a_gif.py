@@ -31,13 +31,14 @@ gs = fig.add_gridspec(nrows=2, ncols=1)
 gaussian = special.Bouncing_Gaussian(case, L, m, l_0, l_range, a)
 
 position_plot = dp.Position_Space_Plot(gaussian, fig, gs, [0,0])
-position_plot.axis.set_ylabel("Probability Density")
 position_plot.set_resolution(5000)
+position_plot.expectation_value = True
 
 momentum_plot = dp.Momentum_Space_Plot(gaussian, fig, gs, [1,0])
 momentum_plot.set_n_bound(100)
 momentum_plot.axis.set_ylim([0, 0.25])
 momentum_plot.set_resolution(1000)
+momentum_plot.expectation_value = True
 
 combined_plot = dp.Multi_Plot(position_plot, momentum_plot)
 combined_plot.animate(fps, time, speed).save("bouncing_gaussian_dirichlet_quarter_revival.mp4")

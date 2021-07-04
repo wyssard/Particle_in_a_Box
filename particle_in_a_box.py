@@ -1,6 +1,5 @@
 from __future__ import annotations
 from copy import deepcopy
-
 from Backend import *
 import Boundaries
 
@@ -178,13 +177,17 @@ class New_Momentum_Space_Projection:
 
     def combine_wavefunction_components(self, energy_space_proj: Energy_Space_Projection) -> None:
         self._new_k_space_wavefunction = None_Function()
+        self._new_k_space_wavefunction_component = []
         temp_proj_coeff = energy_space_proj._energy_proj_coeffs
         temp_wigglers = energy_space_proj._wiggle_factors
         for i in range(len(temp_proj_coeff)):
-            self._new_k_space_wavefunction += temp_proj_coeff[i]*self._new_k_space_single_energy_proj[i]*temp_wigglers[i]
+            component = temp_proj_coeff[i]*self._new_k_space_single_energy_proj[i]*temp_wigglers[i]
+            self._new_k_space_wavefunction += component
+            self._new_k_space_wavefunction_component.append(component)
 
     def compute_expectation_value(self, energy_space_proj: Energy_Space_Projection) -> None:
         self._expectation_value = None_Function()
+        self._expectation_value_components = np.empty((self._sp.num_energy_states, self._sp.num_energy_states), dtype=Function_of_t)
         
         for rh_index in range(self._sp.num_energy_states):
             rh_coeff = energy_space_proj._energy_proj_coeffs[rh_index]
@@ -198,10 +201,25 @@ class New_Momentum_Space_Projection:
 
                 coeff = complex(np.conj(lh_coeff)*rh_coeff)
                 wiggler = Wiggle_Factor(-lh_energy+rh_energy)
+                matrix_element = self._sp.boundary_lib.get_pR_matrix_element(lh_state, rh_state)
 
-                exp_val_component = self._sp.boundary_lib.get_pR_matrix_element(lh_state, rh_state)
+                expectation_value_component = (coeff*wiggler*matrix_element).get_real_part()
 
-                self._expectation_value += (coeff*wiggler*exp_val_component).get_real_part()
+                self._expectation_value += expectation_value_component
+                self._expectation_value_components[lh_index][rh_index] = expectation_value_component
+
+    def wavefunction_immediate_evaluate(self, n: np.ndarray, t: float) -> np.ndarray:
+        wavefunction = self._new_k_space_wavefunction_component[0](n, t)
+        for i in range(1, self._sp.num_energy_states):
+            wavefunction += self._new_k_space_wavefunction_component[i](n, t)
+        return wavefunction
+
+    def expectation_value_immediate_evaluate(self, t: np.ndarray) -> np.ndarray:
+        expectation_value = np.zeros(np.shape(t))
+        for rh_index in range(self._sp.num_energy_states):
+            for lh_index in range(self._sp.num_energy_states):
+                expectation_value += self._expectation_value_components[lh_index, rh_index](t)
+        return expectation_value
 
 
 class Momentum_Space_Projection:
@@ -215,10 +233,19 @@ class Momentum_Space_Projection:
     
     def combine_wavefunction_components(self, energy_space_proj: Energy_Space_Projection) -> None:
         self._cont_k_space_wavefunction = None_Function()
+        self._cont_k_space_wavefunction_components = []
         temp_proj_coeff = energy_space_proj._energy_proj_coeffs
         temp_wigglers = energy_space_proj._wiggle_factors
         for i in range(len(temp_proj_coeff)):
-            self._cont_k_space_wavefunction += temp_proj_coeff[i]*self._cont_k_space_single_energy_proj[i]*temp_wigglers[i]
+            component = temp_proj_coeff[i]*self._cont_k_space_single_energy_proj[i]*temp_wigglers[i]
+            self._cont_k_space_wavefunction += component
+            self._cont_k_space_wavefunction_components.append(component)
+
+    def wavefunction_immediate_evaluate(self, k: np.ndarray, t: float) -> np.ndarray:
+        wavefunction = self._cont_k_space_wavefunction_components[0](k,t)
+        for i in range(1, self._sp.num_energy_states):
+            wavefunction += self._cont_k_space_wavefunction_components[i](k,t)
+        return wavefunction
 
 
 class Position_Space_Projection:
@@ -235,14 +262,19 @@ class Position_Space_Projection:
 
     def combine_wavefunction_components(self, energy_space_proj: Energy_Space_Projection) -> None:
         self._x_space_wavefunction = None_Function()
+        self._x_space_wavefunction_components = []
         temp_proj_coeff = energy_space_proj._energy_proj_coeffs
         temp_wigglers = energy_space_proj._wiggle_factors
         for i in range(len(temp_proj_coeff)):
-            self._x_space_wavefunction += temp_proj_coeff[i]*self._x_space_single_energy_proj[i]*temp_wigglers[i]
-       
+            component = temp_proj_coeff[i]*self._x_space_single_energy_proj[i]*temp_wigglers[i]
+            self._x_space_wavefunction += component
+            self._x_space_wavefunction_components.append(component)
+
     def compute_expectation_value(self, energy_space_proj: Energy_Space_Projection) -> None:
         self._expectation_value = None_Function()
         self._exp_t_deriv = None_Function()
+        self._expectation_value_components = np.empty((self._sp.num_energy_states, self._sp.num_energy_states), dtype=Function_of_t)
+        self._exp_t_deriv_components = np.empty((self._sp.num_energy_states, self._sp.num_energy_states), dtype=Function_of_t)
 
         for rh_index in range(1, self._sp.num_energy_states):
             rh_energy = energy_space_proj._energies[rh_index]
@@ -255,21 +287,51 @@ class Position_Space_Projection:
                 lh_state = self._sp.energy_states[lh_index]
 
                 wiggler = Wiggle_Factor(rh_energy-lh_energy)
-
-                exp_val_component = self._sp.boundary_lib.get_x_matrix_element(lh_state, rh_state) 
+                matrix_element = self._sp.boundary_lib.get_x_matrix_element(lh_state, rh_state) 
                 coeff = complex(np.conj(lh_coeff)*rh_coeff)
-                append = coeff*wiggler
+                
+                expectation_value_component = (2*matrix_element*coeff*wiggler).get_real_part()
+                exp_t_deriv_component = (2*(rh_energy-lh_energy)*coeff*matrix_element*wiggler).get_imag_part()
 
-                self._expectation_value += (2*append*exp_val_component).get_real_part()
-                self._exp_t_deriv += (2*(rh_energy-lh_energy)*append*exp_val_component).get_imag_part()
+                self._expectation_value += expectation_value_component
+                self._expectation_value_components[lh_index][rh_index] = expectation_value_component
+                
+                self._exp_t_deriv += exp_t_deriv_component
+                self._exp_t_deriv_components[lh_index][rh_index] = exp_t_deriv_component
 
-        
         for index in range(self._sp.num_energy_states):
             coeff = energy_space_proj._energy_proj_coeffs[index]
             state = self._sp.energy_states[index]
-            exp_val_component = self._sp.boundary_lib.get_x_matrix_element(state, state)
+            matrix_element = self._sp.boundary_lib.get_x_matrix_element(state, state)
+            expectation_value_component = np.abs(coeff)**2*matrix_element
 
-            self._expectation_value += Function_of_t(lambda t: np.abs(coeff)**2*exp_val_component*np.ones(np.shape(t)))
+            self._expectation_value += Function_of_t(lambda t: expectation_value_component*np.ones(np.shape(t)))
+            self._expectation_value_components[index][index] = Function_of_t(lambda t: expectation_value_component*np.ones(np.shape(t)))
+
+    def wavefunction_immediate_evaluate(self, x: np.ndarray, t: float) -> np.ndarray:
+        wavefunction = self._x_space_wavefunction_components[0](x, t)
+        for i in range(1, self._sp.num_energy_states):
+            wavefunction += self._x_space_wavefunction_components[i](x,t)
+        return wavefunction
+
+    def expectation_value_immediate_evaluate(self, t: np.ndarray) -> np.ndarray:
+        expectation_value = self._expectation_value_components[0,0](t)
+        for index in range(1, self._sp.num_energy_states):
+            expectation_value += self._expectation_value_components[index, index](t)
+
+        for rh_index in range(1, self._sp.num_energy_states):
+            for lh_index in range(0, rh_index):
+                expectation_value += self._expectation_value_components[lh_index, rh_index](t)
+        
+        return expectation_value
+
+    def exp_t_deriv_immediate_evaluate(self, t: np.ndarray) -> np.ndarray:
+        exp_t_deriv = np.zero(np.shape(t))
+        for rh_index in range(1, self._sp.num_energy_states):
+            for lh_index in range(0, rh_index):
+                exp_t_deriv += self._exp_t_deriv_components[lh_index, rh_index](t)
+        
+        return exp_t_deriv
 
 
 class Particle_in_Box_State:
@@ -482,3 +544,44 @@ class Particle_in_Box_State:
     def case(self, new_case: str) -> None:
         self._sp.case = new_case
         self.full_projection_recompute()
+
+
+class Particle_in_Box_Immediate_Mode(Particle_in_Box_State):
+    def __init__(self, case: str, L: float, m: float, energy_states: list = [], amplitudes: np.ndarray = np.array([]), gamma: float =None) -> None:
+        super().__init__(case, L, m, energy_states, amplitudes, gamma)
+
+    @property
+    def x_space_wavefunction(self) -> Function_of_n_and_t:
+        def wrapper(x: np.ndarray, t: float) -> np.ndarray:
+            return self._xsp.wavefunction_immediate_evaluate(x, t)
+        return wrapper
+
+    @property
+    def x_space_expectation_value(self) -> Function_of_t:
+        def wrapper(t: np.ndarray) -> np.ndarray:
+            return self._xsp.expectation_value_immediate_evaluate(t)
+        return wrapper
+
+    @property
+    def x_space_expectation_value_derivative(self) -> Function_of_t:
+        def wrapper(t: np.ndarray) -> np.ndarray:
+            return self._xsp.exp_t_deriv_immediate_evaluate(t)
+        return wrapper    
+
+    @property
+    def k_space_wavefunction(self) -> Function_of_n_and_t:
+        def wrapper(k: np.ndarray, t: float) -> np.ndarray:
+            return self._ksp.wavefunction_immediate_evaluate(k, t)
+        return wrapper
+
+    @property
+    def new_k_space_wavefunction(self) -> Function_of_n_and_t:
+        def wrapper(n: np.ndarray, t: float) -> np.ndarray:
+            return self._new_ksp.wavefunction_immediate_evaluate(n, t)
+        return wrapper
+
+    @property
+    def new_k_space_expectation_value(self) -> Function_of_t:
+        def wrapper(t: np.ndarray) -> np.ndarray:
+            return self._new_ksp.expectation_value_immediate_evaluate(t)
+        return wrapper

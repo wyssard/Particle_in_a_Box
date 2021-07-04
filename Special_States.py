@@ -14,7 +14,7 @@ class Momentum_Space_Gaussian:
         k_0 = self._k_0
         return np.sqrt(2*a*np.sqrt(np.pi))*np.exp(-a**2/2*(k-k_0)**2)
 
-class Bouncing_Gaussian(pib.Particle_in_Box_State):
+class Bouncing_Gaussian(pib.Particle_in_Box_Immediate_Mode):
     def find_amplitudes(self) -> None:
         L = self.L
         amplitudes_to_add = []

@@ -28,6 +28,10 @@ class Updatable_Plot(ABC):
         self.update()
 
     @abstractmethod
+    def init_anim(self):
+        self.update()
+
+    @abstractmethod
     def animate_frame(self, i: int):
         pass
 
@@ -59,7 +63,6 @@ class Updatable_Plot(ABC):
 class Position_Space_Plot(Updatable_Plot):
     def __init__(self, state: pib.Particle_in_Box_State, fig: plt.Figure, gs=None, pos=[0, 0]) -> None:
         super().__init__(state, fig, gs, pos)
-        self._state = state
         self.set_x_bound(state.L/2)
         self.axis.set_xlabel(r"$x$")
         self.axis.set_ylabel(r"$\left\vert\left\langle x \vert \Psi(t) \right\rangle\right\vert^2$")
@@ -73,17 +76,26 @@ class Position_Space_Plot(Updatable_Plot):
 
     def plot(self, time: float) -> None:
         super().plot()
+        self.x_lines = self.axis.plot(self.x, np.abs(self.x_space_wavefunc(self.x, time))**2, color = self._dark_color,
+                                        label=r"$\left\vert \left\langle x \vert \Psi(t) \right\rangle \right\vert ^2$")
+
+        if self.expectation_value == True:
+            self.x_exp_line = self.axis.axvline(self.x_exp_val(time), color="0.5", linestyle="--", linewidth=1,
+                                        label=r"$\left\langle \Psi(t) \right\vert x \left\vert \Psi(t) \right\rangle$")
+        
+
+    def init_anim(self, time):
+        super().init_anim()
         self.x_lines = self.axis.plot(self.x, np.abs(self.x_space_wavefunc(self.x, time))**2, animated=True, color = self._dark_color,
                                         label=r"$\left\vert \left\langle x \vert \Psi(t) \right\rangle \right\vert ^2$")
+
         if self.expectation_value == True:
             self.x_exp_line = self.axis.axvline(self.x_exp_val(time), animated=True, color="0.5", linestyle="--", linewidth=1,
                                         label=r"$\left\langle \Psi(t) \right\vert x \left\vert \Psi(t) \right\rangle$")
 
-
     def set_x_bound(self, new_bound: float) -> None:
         self.x_bound = new_bound
         
-
     def animate_frame(self, i):
         self.x_lines[0].set_data(self.x, np.abs(self.x_space_wavefunc(self.x, self.time_per_frame*i))**2)
         return self.x_lines
@@ -96,55 +108,91 @@ class Position_Space_Plot(Updatable_Plot):
         return self.x_lines + [self.x_exp_line]
 
 
-class Momentum_Space_Plot(Updatable_Plot):
-    def __init__(self, state: pib.Particle_in_Box_State, fig: plt.Figure, gs = None, pos = [0,0]) -> None:
+class Discrete_Momentum_Space_Plot(Updatable_Plot):
+    def __init__(self, state: pib.Particle_in_Box_State, fig: plt.Figure, gs=None, pos=[0,0]) -> None:
         super().__init__(state, fig, gs, pos)
-        self._state = state
-        self.axis.set_xlabel(r"$k$, $k_n$")
-        self.axis.set_ylabel("Probability Distribution/Density")
+        self._old_light_color = self._light_color
+        #self._light_color = self._dark_color
+        self.axis.set_xlabel(r"$k_n$")
+        self.axis.set_ylabel(r"$\left\vert\left\langle k_n \vert \Psi(t) \right\rangle\right\vert^2$")
         self.set_n_bound(15)
         self.update()
-
-    def update(self):
-        self.k_space_wavefunc = self._state.k_space_wavefunction
-        self.new_k_space_wavefunc = self._state.new_k_space_wavefunction
-        self.k_exp_val = self._state.new_k_space_expectation_value
-
-        self.kn = self._state.boundary_lib.get_kn(self.n)
-        self.bar_width =  0.8*(self.kn[0]-self.kn[1])
-        self.k_bound = self._state.boundary_lib.get_kn(self.n_bound*(1.001))
-        self.k = np.linspace(-self.k_bound, self.k_bound, self.res, endpoint=True)
 
     def set_n_bound(self, new_bound: int) -> None:
         self.n_bound = new_bound
         self.n = np.arange(-self.n_bound, self.n_bound+1, 1, dtype=int)
-        
+
+    def update(self):
+        self.new_k_space_wavefunc = self._state.new_k_space_wavefunction
+        self.k_exp_val = self._state.new_k_space_expectation_value
+        self.kn = self._state.boundary_lib.get_kn(self.n)
+        self.bar_width =  0.8*(self.kn[0]-self.kn[1])
+
     def plot(self, time: float | np.ndarray):
         super().plot()
-        self.k_lines = self.axis.plot(self.k, np.abs(self.k_space_wavefunc(self.k, time))**2, animated=True, color = self._dark_color,
-                                        label=r"$\left\vert \left\langle k \vert \Psi(t) \right\rangle \right\vert ^2$")
+        self.k_bars = self.axis.bar(self.kn, np.abs(self.new_k_space_wavefunc(self.n, time))**2, self.bar_width, color = self._light_color,
+                                        edgecolor = self._dark_color, linewidth = 0.5, label=r"$\left\vert \left\langle n \vert \Psi(t) \right\rangle \right\vert ^2$")
+        if self.expectation_value == True:
+            self.k_exp_line = self.axis.axvline(self.k_exp_val(time), color="0.5", linestyle="--", linewidth=1,
+                                        label=r"$\left\langle \Psi(t) \right\vert p_R \left\vert \Psi(t) \right\rangle$")
+
+    def init_anim(self, time):
+        super().init_anim()
         self.k_bars = self.axis.bar(self.kn, np.abs(self.new_k_space_wavefunc(self.n, time))**2, self.bar_width, animated=True, color = self._light_color,
                                         label=r"$\left\vert \left\langle n \vert \Psi(t) \right\rangle \right\vert ^2$")
         if self.expectation_value == True:
             self.k_exp_line = self.axis.axvline(self.k_exp_val(time), animated=True, color="0.5", linestyle="--", linewidth=1,
-                                        label=r"$\left\langle \Psi(t) \right\vert p_R \left\vert \Psi(t) \right\rangle$")
+                                        label=r"$\left\langle \Psi(t) \right\vert p_R \left\vert \Psi(t) \right\rangle$")   
 
     def animate_frame(self, i: int):
-        self.k_lines[0].set_data(self.k, np.abs(self.k_space_wavefunc(self.k, self.time_per_frame*i))**2)
         for bar, h in zip(self.k_bars, np.abs(self.new_k_space_wavefunc(self.n, i*self.time_per_frame))**2):
             bar.set_height(h)
-        return self.k_lines + list(self.k_bars)    
+        return list(self.k_bars)    
 
     def animate_exp_value(self, i: int):
-        self.k_lines[0].set_data(self.k, np.abs(self.k_space_wavefunc(self.k, self.time_per_frame*i))**2)
-
         for bar, h in zip(self.k_bars, np.abs(self.new_k_space_wavefunc(self.n, i*self.time_per_frame))**2):
             bar.set_height(h)
 
         k_ev = self.k_exp_val(i*self.time_per_frame)
         self.k_exp_line.set_data([k_ev, k_ev], [0,1])
 
-        return self.k_lines + list(self.k_bars) + [self.k_exp_line]
+        return list(self.k_bars) + [self.k_exp_line]              
+
+
+class Momentum_Space_Plot(Discrete_Momentum_Space_Plot):
+    def __init__(self, state: pib.Particle_in_Box_State, fig: plt.Figure, gs = None, pos = [0,0]) -> None:
+        super().__init__(state, fig, gs, pos)
+        self.axis.set_xlabel(r"$k$, $k_n$")
+        self.axis.set_ylabel("Probability Distribution/Density")
+        self._light_color = self._old_light_color
+        self.update()
+
+    def update(self):
+        super().update()
+        self.k_space_wavefunc = self._state.k_space_wavefunction
+        self.k_bound = self._state.boundary_lib.get_kn(self.n_bound*(1.001))
+        self.k = np.linspace(-self.k_bound, self.k_bound, self.res, endpoint=True)
+        
+    def plot(self, time: float | np.ndarray):
+        super().plot(time)
+        self.k_lines = self.axis.plot(self.k, np.abs(self.k_space_wavefunc(self.k, time))**2, color = self._dark_color,
+                                        label=r"$\left\vert \left\langle k \vert \Psi(t) \right\rangle \right\vert ^2$")
+
+    def init_anim(self, time):
+        super().init_anim(time)
+        self.k_lines = self.axis.plot(self.k, np.abs(self.k_space_wavefunc(self.k, time))**2, animated=True, color = self._dark_color,
+                                        label=r"$\left\vert \left\langle k \vert \Psi(t) \right\rangle \right\vert ^2$")
+
+    def animate_frame(self, i: int):
+        self.k_lines[0].set_data(self.k, np.abs(self.k_space_wavefunc(self.k, self.time_per_frame*i))**2)
+        return self.k_lines + super().animate_frame(i) 
+
+    def animate_exp_value(self, i: int):
+        self.k_lines[0].set_data(self.k, np.abs(self.k_space_wavefunc(self.k, self.time_per_frame*i))**2)
+        k_ev = self.k_exp_val(i*self.time_per_frame)
+        self.k_exp_line.set_data([k_ev, k_ev], [0,1])
+
+        return self.k_lines + [self.k_exp_line] + super().animate_exp_value(i)
 
 
 class Multi_Plot:
@@ -159,10 +207,13 @@ class Multi_Plot:
         for plot in self._plots:
             plot.plot(time)
 
+    def init_anim(self, time):
+        for plot in self._plots:
+            plot.init_anim(time)
+
     def add_legend(self) -> None:
         for plot in self._plots:
             plot.axis.legend()
-
     
     def animate_frame(self, i: int):
         out = []
@@ -188,7 +239,7 @@ class Multi_Plot:
         for plot in self._plots:
             plot.time_per_frame = time_per_frame
         num_frames = time*fps
-        self.plot(0)
+        self.init_anim(0)
 
 
         if self._plots[0].expectation_value == False:
