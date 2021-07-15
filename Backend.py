@@ -306,11 +306,11 @@ class New_Style_Boundary(ABC):
     for the 'particle in a box'-state.
     """
 
-    def __init__(self, L: float, gamma: float, l_to_kl_mapper_ref: l_to_kl_mapper) -> None:
+    def __init__(self, L: float, gamma: float, theta: float, l_to_kl_mapper_ref: l_to_kl_mapper) -> None:
         self._L = L
         self._gamma = gamma
         self._l_kl_map = l_to_kl_mapper_ref
-        self._theta = 0
+        self._theta = theta
 
     @abstractmethod
     def get_kn(self, n: int | list) -> float | list:

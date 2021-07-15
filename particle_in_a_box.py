@@ -13,7 +13,7 @@ class State_Properties:
     also stored as a list
     """
 
-    def __init__(self, case: str, gamma: float, L: float, m: float) -> None:
+    def __init__(self, case: str, gamma: float, L: float, m: float, theta: float) -> None:
         self._gamma = gamma
         self._L = L
         self.m = m
@@ -23,37 +23,33 @@ class State_Properties:
 
         self._l_kl_map = l_to_kl_mapper(self._energy_states, self._k_kappa_l_array)
 
+        # Experimental
+        self._theta = theta
+
         self._case = case
         self.switch_case(case)
 
-        # Experimental
-        self._theta = 0
-        
-
     def switch_case(self, case: str):
         if case == "symmetric":
-            self._boundary_lib = Boundaries.Symmetric_Boundary(self._L, self._gamma, self._l_kl_map)
+            self._boundary_lib = Boundaries.Symmetric_Boundary(self._L, self._gamma, self._theta, self._l_kl_map)
         
         elif case == "neumann":
-            self._boundary_lib = Boundaries.Neumann_Boudnary(self._L, self._gamma, self._l_kl_map)
+            self._boundary_lib = Boundaries.Neumann_Boudnary(self._L, self._gamma, self._theta, self._l_kl_map)
 
         elif case == "dirichlet":
-            self._boundary_lib = Boundaries.Dirichlet_Boundary(self._L, self._gamma, self._l_kl_map)
+            self._boundary_lib = Boundaries.Dirichlet_Boundary(self._L, self._gamma, self._theta, self._l_kl_map)
 
         elif case == "dirichlet_neumann":
-            self._boundary_lib = Boundaries.Dirichlet_Neumann_Boundary(self._L, self._gamma, self._l_kl_map)
+            self._boundary_lib = Boundaries.Dirichlet_Neumann_Boundary(self._L, self._gamma, self._theta, self._l_kl_map)
 
         elif case == "anti_symmetric":
-            self._boundary_lib = Boundaries.Anti_Symmetric_Boundary(self._L, self._gamma, self._l_kl_map)
+            self._boundary_lib = Boundaries.Anti_Symmetric_Boundary(self._L, self._gamma, self._theta, self._l_kl_map)
 
         elif case == "symmetric_nummeric":
-            self._boundary_lib = Boundaries.Symmetric_Nummeric(self._L, self._gamma, self._l_kl_map)
+            self._boundary_lib = Boundaries.Symmetric_Nummeric(self._L, self._gamma, self._theta, self._l_kl_map)
 
         elif case == "anti_symmetric_nummeric":
-            self._boundary_lib = Boundaries.Anti_Symmetric_Nummeric(self._L, self._gamma, self._l_kl_map)
-
-        elif case == "dirichlet_neumann_nummeric":
-            self._boundary_lib = Boundaries.Dririchlet_Neumann_Nummeric(self._L, self._gamma, self._l_kl_map)
+            self._boundary_lib = Boundaries.Anti_Symmetric_Nummeric(self._L, self._gamma, self._theta, self._l_kl_map)
 
     @property
     def case(self) -> str:
@@ -335,8 +331,8 @@ class Position_Space_Projection:
 
 
 class Particle_in_Box_State:
-    def __init__(self, case: str, L: float, m: float, energy_states: list = [], amplitudes: np.ndarray = np.array([]), gamma: float =None) -> None:
-        self._sp = State_Properties(case, gamma, L, m)
+    def __init__(self, case: str, L: float, m: float, energy_states: list = [], amplitudes: np.ndarray = np.array([]), gamma: float =None, theta: float = 0) -> None:
+        self._sp = State_Properties(case, gamma, L, m, theta)
 
         self._esp = Energy_Space_Projection.empty_init(self._sp)
         self._xsp = Position_Space_Projection.empty_init(self._sp)
@@ -547,8 +543,8 @@ class Particle_in_Box_State:
 
 
 class Particle_in_Box_Immediate_Mode(Particle_in_Box_State):
-    def __init__(self, case: str, L: float, m: float, energy_states: list = [], amplitudes: np.ndarray = np.array([]), gamma: float =None) -> None:
-        super().__init__(case, L, m, energy_states, amplitudes, gamma)
+    def __init__(self, case: str, L: float, m: float, energy_states: list = [], amplitudes: np.ndarray = np.array([]), gamma: float =None, theta: float = 0) -> None:
+        super().__init__(case, L, m, energy_states, amplitudes, gamma, theta)
 
     @property
     def x_space_wavefunction(self) -> Function_of_n_and_t:

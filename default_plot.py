@@ -2,13 +2,14 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 import particle_in_a_box as pib
 import numpy as np
+import colorsys as cs
 from matplotlib import pyplot as plt
 from matplotlib.animation import FuncAnimation
 
 class Updatable_Plot(ABC):
-    def __init__(self, state: pib.Particle_in_Box_State, fig: plt.Figure, gs = None, pos = [0,0], light_color = "#8bb1cc", dark_color = "#0f4c75") -> None:
-        self._light_color = light_color
-        self._dark_color = dark_color
+    def __init__(self, state: pib.Particle_in_Box_State, fig: plt.Figure, gs = None, pos = [0,0]) -> None:
+        self._light_color = cs.hls_to_rgb(235/360, 0.9, 1)
+        self._dark_color = cs.hls_to_rgb(235/360, 0.37, 1)
         self.fig = fig
         if gs == None:
             self.axis = fig.add_subplot()

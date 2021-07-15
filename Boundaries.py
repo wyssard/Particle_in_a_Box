@@ -9,8 +9,9 @@ import warnings
 
 
 class Symmetric_Boundary(New_Style_Boundary):
-    def __init__(self, L: float, gamma: float, l_to_kl_mapper_ref: l_to_kl_mapper) -> None:
-        super().__init__(L, gamma, l_to_kl_mapper_ref)
+    
+    def __init__(self, L: float, gamma: float, theta: float, l_to_kl_mapper_ref: l_to_kl_mapper) -> None:
+        super().__init__(L, gamma, theta, l_to_kl_mapper_ref)
         self._pos_energy_even_state_eq = lambda gammaL, kL: gammaL - kL*np.tan(kL/2)
         self._pos_energy_odd_state_eq = lambda gammaL, kL: gammaL + kL/np.tan(kL/2)
         self._neg_energy_even_state_eq = lambda gammaL, kappaL: gammaL + kappaL*np.tanh(kappaL/2)
@@ -246,8 +247,8 @@ class Symmetric_Boundary(New_Style_Boundary):
 
     
 class Neumann_Boudnary(New_Style_Boundary):
-    def __init__(self, L: float, gamma: float, l_to_kl_mapper_ref: l_to_kl_mapper) -> None:
-        super().__init__(L, gamma, l_to_kl_mapper_ref)
+    def __init__(self, L: float, gamma: float, theta: float, l_to_kl_mapper_ref: l_to_kl_mapper) -> None:
+        super().__init__(L, gamma, theta, l_to_kl_mapper_ref)
 
     def get_kn(self, n: int | list) -> float | list:
         return n*np.pi/self._L
@@ -367,8 +368,8 @@ class Neumann_Boudnary(New_Style_Boundary):
 
 
 class Dirichlet_Boundary(New_Style_Boundary):
-    def __init__(self, L: float, gamma: float, l_to_kl_mapper_ref: l_to_kl_mapper) -> None:
-        super().__init__(L, gamma, l_to_kl_mapper_ref)
+    def __init__(self, L: float, gamma: float, theta: float, l_to_kl_mapper_ref: l_to_kl_mapper) -> None:
+        super().__init__(L, gamma, theta, l_to_kl_mapper_ref)
 
     def get_kn(self, n: int | list) -> float | list:
         return n*np.pi/self._L
@@ -449,8 +450,8 @@ class Dirichlet_Boundary(New_Style_Boundary):
 
 
 class Dirichlet_Neumann_Boundary(New_Style_Boundary):
-    def __init__(self, L: float, gamma: float, l_to_kl_mapper_ref: l_to_kl_mapper) -> None:
-        super().__init__(L, gamma, l_to_kl_mapper_ref)
+    def __init__(self, L: float, gamma: float, theta: float, l_to_kl_mapper_ref: l_to_kl_mapper) -> None:
+        super().__init__(L, gamma, theta, l_to_kl_mapper_ref)
 
     def get_kn(self, n: int | list) -> float | list:
         return (n+1/2)*np.pi/self._L
@@ -521,8 +522,8 @@ class Dirichlet_Neumann_Boundary(New_Style_Boundary):
 
 
 class Anti_Symmetric_Boundary(New_Style_Boundary):
-    def __init__(self, L: float, gamma: float, l_to_kl_mapper_ref: l_to_kl_mapper) -> None:
-        super().__init__(L, gamma, l_to_kl_mapper_ref)
+    def __init__(self, L: float, gamma: float, theta: float, l_to_kl_mapper_ref: l_to_kl_mapper) -> None:
+        super().__init__(L, gamma, theta, l_to_kl_mapper_ref)
 
     @staticmethod
     def x_space_projection_for_nummerics(L, gamma, l, kl) -> Function_of_n:
@@ -618,8 +619,8 @@ class Anti_Symmetric_Boundary(New_Style_Boundary):
     
 
 class Symmetric_Nummeric(Symmetric_Boundary):
-    def __init__(self, L: float, gamma: float, l_to_kl_mapper_ref: l_to_kl_mapper) -> None:
-        super().__init__(L, gamma, l_to_kl_mapper_ref)
+    def __init__(self, L: float, gamma: float, theta: float, l_to_kl_mapper_ref: l_to_kl_mapper) -> None:
+        super().__init__(L, gamma, theta, l_to_kl_mapper_ref)
         self._n_range = 100
 
     def get_pR_matrix_element(self, lhs_state: int, rhs_state: int) -> complex:
@@ -650,8 +651,8 @@ class Symmetric_Nummeric(Symmetric_Boundary):
 
 
 class Anti_Symmetric_Nummeric(Anti_Symmetric_Boundary):
-    def __init__(self, L: float, gamma: float, l_to_kl_mapper_ref: l_to_kl_mapper) -> None:
-        super().__init__(L, gamma, l_to_kl_mapper_ref)
+    def __init__(self, L: float, gamma: float, theta: float, l_to_kl_mapper_ref: l_to_kl_mapper) -> None:
+        super().__init__(L, gamma, theta, l_to_kl_mapper_ref)
         self._n_range = 100
 
     def get_pR_matrix_element(self, lhs_state: int, rhs_state: int) -> complex:
