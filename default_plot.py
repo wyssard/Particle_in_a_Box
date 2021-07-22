@@ -43,6 +43,10 @@ class Updatable_Plot(ABC):
     def set_resolution(self, res: int):
         self.res = res
 
+    @abstractmethod
+    def clear(self):
+        self.axis.cla()
+
     def animate(self, fps: int, time: float, speed: float) -> FuncAnimation:
         energy_space_wavefunc = self._state.energy_space_wavefunction
         if self._state._sp._num_energy_states == 2:
@@ -83,7 +87,12 @@ class Position_Space_Plot(Updatable_Plot):
         if self.expectation_value == True:
             self.x_exp_line = self.axis.axvline(self.x_exp_val(time), color="0.5", linestyle="--", linewidth=1,
                                         label=r"$\left\langle \Psi(t) \right\vert x \left\vert \Psi(t) \right\rangle$")
-        
+    
+    def clear(self):
+        super().clear()
+        self.set_x_bound(self._state.L/2)
+        self.axis.set_xlabel(r"$x$")
+        self.axis.set_ylabel(r"$\left\vert\left\langle x \vert \Psi(t) \right\rangle\right\vert^2$")
 
     def init_anim(self, time):
         super().init_anim()
@@ -118,6 +127,11 @@ class Discrete_Momentum_Space_Plot(Updatable_Plot):
         self.axis.set_ylabel(r"$\left\vert\left\langle k_n \vert \Psi(t) \right\rangle\right\vert^2$")
         self.set_n_bound(15)
         self.update()
+    
+    def clear(self):
+        super().clear()
+        self.axis.set_xlabel(r"$k_n$")
+        self.axis.set_ylabel(r"$\left\vert\left\langle k_n \vert \Psi(t) \right\rangle\right\vert^2$")
 
     def set_n_bound(self, new_bound: int) -> None:
         self.n_bound = new_bound
@@ -168,6 +182,11 @@ class Momentum_Space_Plot(Discrete_Momentum_Space_Plot):
         self._light_color = self._old_light_color
         self.update()
 
+    def clear(self):
+        self.axis.cla()
+        self.axis.set_xlabel(r"$k$, $k_n$")
+        self.axis.set_ylabel("Probability Distribution/Density")
+
     def update(self):
         super().update()
         self.k_space_wavefunc = self._state.k_space_wavefunction
@@ -207,6 +226,10 @@ class Multi_Plot:
     def plot(self, time: float) -> None:
         for plot in self._plots:
             plot.plot(time)
+
+    def clear(self):
+        for plot in self._plots:
+            plot.clear()
 
     def init_anim(self, time):
         for plot in self._plots:
