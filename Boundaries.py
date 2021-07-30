@@ -530,9 +530,8 @@ class Anti_Symmetric_Boundary(New_Style_Boundary):
         i_factor = lambda l: 1 if l%2 == 0 else -1j
             
         if np.imag(kl) == 0:
-            boundray_expr = np.exp(1j*kl*L)*(gamma + 1j*kl)/(gamma - 1j*kl)
-            norm_expr = np.sqrt(2/L)/np.sqrt(1 - np.real(boundray_expr)*np.sin(kl*L)/(kl*L))
-            return Function_of_n(lambda x: norm_expr*1/2*i_factor(l)*(np.exp(1j*kl*x) - boundray_expr*np.exp(-1j*kl*x)))
+            boundray_expr = ((-1)**l)*(gamma + 1j*kl)/(gamma - 1j*kl)
+            return Function_of_n(lambda x: i_factor(l)/(np.sqrt(2*L))*(np.exp(1j*kl*x) - boundray_expr*np.exp(-1j*kl*x)))
         
         else:
             kappal = np.imag(kl)
