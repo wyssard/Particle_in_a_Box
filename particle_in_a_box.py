@@ -375,7 +375,7 @@ class Particle_in_Box_State:
             the_states = [the_states]
             the_energy_proj_coeffs = [the_energy_proj_coeffs]
 
-        print("adding state(s): ", the_states)
+        #print("adding state(s): ", the_states)
 
         self._esp._energy_proj_coeffs = (self._esp._energy_proj_coeffs*(self._esp._Norm)).tolist()
         
@@ -406,14 +406,14 @@ class Particle_in_Box_State:
         self.compute_expectation_values()
         self.combine_wavefunction_components()
 
-        print("current config: ", self._sp.energy_states)
+        #print("current config: ", self._sp.energy_states)
 
     def remove_state(self, the_states: list) -> None:
         if isinstance(the_states, int):
-            print("single state converted to list: ", the_states)
+            #print("single state converted to list: ", the_states)
             the_states = [the_states]
         
-        print("removing state(s): ", the_states)
+        #print("removing state(s): ", the_states)
         self._sp.num_energy_states -= len(the_states)
 
         for state in the_states:
@@ -434,7 +434,7 @@ class Particle_in_Box_State:
         self.compute_expectation_values()
         self.combine_wavefunction_components()
 
-        print("current config: ", self._sp.energy_states)
+        #print("current config: ", self._sp.energy_states)
         ##print("energy expectation value: ", self._esp._exp_value)
 
     def reset(self) -> None:

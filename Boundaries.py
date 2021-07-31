@@ -528,21 +528,20 @@ class Anti_Symmetric_Boundary(New_Style_Boundary):
     @staticmethod
     def x_space_projection_for_nummerics(L, gamma, l, kl) -> Function_of_n:
         i_factor = lambda l: 1 if l%2 == 0 else -1j
-            
+
         if np.imag(kl) == 0:
             boundray_expr = ((-1)**l)*(gamma + 1j*kl)/(gamma - 1j*kl)
             return Function_of_n(lambda x: i_factor(l)/(np.sqrt(2*L))*(np.exp(1j*kl*x) - boundray_expr*np.exp(-1j*kl*x)))
         
         else:
-            kappal = np.imag(kl)
-            return Function_of_n(lambda x: np.sqrt(kappal/np.sinh(kappal*L))*np.exp(-gamma*x))
+            return Function_of_n(lambda x: np.sqrt(gamma/np.sinh(gamma*L))*np.exp(-gamma*x))
 
     def get_kn(self, n: int | list) -> float | list:
         return n*np.pi/self._L + self._theta/(2*self._L)
 
     def get_kl(self, l: int) -> complex:
         if l == 0:
-            return 1j*self._gamma
+            return 1j*self._gamma if self._gamma > 0 else -1j*self._gamma
         else:
             return l*np.pi/self._L
 
