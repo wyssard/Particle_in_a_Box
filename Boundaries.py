@@ -527,11 +527,11 @@ class Anti_Symmetric_Boundary(New_Style_Boundary):
 
     @staticmethod
     def x_space_projection_for_nummerics(L, gamma, l, kl) -> Function_of_n:
-        i_factor = lambda l: 1 if l%2 == 0 else -1j
+        phase_factor = lambda l: np.exp(1j*np.arctan((gamma*L)/(np.pi*l))) if l%2 == 0 else np.exp(-1j*np.arctan((np.pi*l)/(gamma*L)))
 
         if np.imag(kl) == 0:
             boundray_expr = ((-1)**l)*(gamma + 1j*kl)/(gamma - 1j*kl)
-            return Function_of_n(lambda x: i_factor(l)/(np.sqrt(2*L))*(np.exp(1j*kl*x) - boundray_expr*np.exp(-1j*kl*x)))
+            return Function_of_n(lambda x: phase_factor(l)/(np.sqrt(2*L))*(np.exp(1j*kl*x) - boundray_expr*np.exp(-1j*kl*x)))
         
         else:
             return Function_of_n(lambda x: np.sqrt(gamma/np.sinh(gamma*L))*np.exp(-gamma*x))
