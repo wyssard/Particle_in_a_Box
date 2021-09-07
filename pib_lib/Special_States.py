@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from Backend import *
-import particle_in_a_box as pib
+from pib_lib.Backend import *
+from pib_lib import particle_in_a_box as pib
 
 
 class Momentum_Space_Gaussian:
@@ -84,7 +84,4 @@ class Bouncing_Gaussian(pib.Particle_in_Box_Immediate_Mode):
         Gaussian._k_space_gaussian = Momentum_Space_Gaussian(a, k_0)
         Gaussian.find_amplitudes()
         return Gaussian
-        
-
-
         

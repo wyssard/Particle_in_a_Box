@@ -1,7 +1,7 @@
 from __future__ import annotations
 from copy import deepcopy
-from Backend import *
-import Boundaries
+from pib_lib.Backend import *
+from pib_lib import Boundaries
 
 class State_Properties:
     """

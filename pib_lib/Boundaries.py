@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from Backend import *
+from pib_lib.Backend import *
 from scipy.optimize import fsolve
 from scipy.optimize import brentq
 from scipy.integrate import quad
