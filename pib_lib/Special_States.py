@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from pib_lib.Backend import *
-from pib_lib import particle_in_a_box as pib
+from .Backend import *
+from . import particle_in_a_box as pib
 
 
 class Momentum_Space_Gaussian:

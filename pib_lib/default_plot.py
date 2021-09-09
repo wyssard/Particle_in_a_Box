@@ -1,6 +1,6 @@
 from __future__ import annotations
 from abc import ABC, abstractmethod
-from pib_lib import particle_in_a_box as pib
+from . import particle_in_a_box as pib
 import numpy as np
 import colorsys as cs
 from matplotlib import pyplot as plt

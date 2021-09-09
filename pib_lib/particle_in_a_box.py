@@ -1,7 +1,7 @@
 from __future__ import annotations
 from copy import deepcopy
-from pib_lib.Backend import *
-from pib_lib import Boundaries
+from .Backend import *
+from . import Boundaries
 
 class State_Properties:
     """
@@ -494,7 +494,7 @@ class Particle_in_Box_State:
 
     @L.setter
     def L(self, new_L: float) -> None:
-        print("setting L...(particle_in_a_box)")
+        #print("setting L...(particle_in_a_box)")
         self._sp.L = new_L
         self.full_projection_recompute()
 
