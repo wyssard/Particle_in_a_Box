@@ -184,6 +184,32 @@ class Single_Updatable_Line_Base(Single_Updatable_Plot):
     def res(self, new_res) -> None:
         self._res = new_res
 
+class Single_Updatable_Vertical_Line(Single_Updatable_Plot):
+    def __init__(self, state: pib.Particle_in_Box_State, fig: plt.Figure, axis: plt.Axes=None) -> None:
+        super().__init__(state, fig, axis=axis)
+        self._line = None
+
+    def _init_config(self, arg_dict: dict):
+        for key, value in arg_dict.items():
+            if key=="color":
+                self._color = value
+            elif key=="linestyle":
+                self._ls = value
+            elif key=="linewidth":
+                self._lw = value
+    
+    def _line_config(self, arg_dict: dict):
+        for key, value in arg_dict.items():
+            if key=="color":
+                self._color = value
+                self._line.set_color(value)
+            elif key=="linestyle":
+                self._ls = value
+                self._line.set_linestyle(value)
+            elif key=="linewidth":
+                self._lw = value
+                self._line.set_linewidth(value)
+
 class Single_Updatable_Line(Single_Updatable_Line_Base):
     def __init__(self, state: pib.Particle_in_Box_State, fig: plt.Figure, axis: plt.Axes=None) -> None:
         super().__init__(state, fig, axis=axis)  
@@ -191,11 +217,10 @@ class Single_Updatable_Line(Single_Updatable_Line_Base):
         self._y = None
 
     def _line_data_init(self) -> None:
-        self._lines = self._axis.plot(self._x, self._y(self._time), c=dark_blue, lw=1, animated=True)
+        self._lines = self._axis.plot(self._x, self._y(self._time), c=self._color, lw=self._lw, ls=self._ls, animated=True)
     
     def _line_data_updater(self) -> None:
         self._lines[0].set_data(self._x, self._y(self._time))
-
 
 class Position_Space_Plot(Single_Updatable_Line):
     def __init__(self, state: pib.Particle_in_Box_State, mode: str, fig: plt.Figure, axis: plt.Axes=None) -> None:
@@ -274,7 +299,7 @@ class New_Momentum_Space_Plot(Single_Updatable_Plot):
         self._barwidth = 0.8*(self._kn[1]-self._kn[0])
 
     def _line_data_init(self) -> None:
-        self._bars = self._axis.bar(self._kn, self._y(self._time), self._barwidth, color=light_blue, animated=True)
+        self._bars = self._axis.bar(self._kn, self._y(self._time), self._barwidth, color=self._color, animated=True)
         self._lines = list(self._bars)
 
     def _line_data_updater(self) -> None:
@@ -339,7 +364,6 @@ class Expectation_Value_Evolution(Single_Updatable_Line_Base):
         super().__init__(state, fig, axis=axis)
         self.set_t_range([0,10])
         self._time_evolution = None
-        self._marker = None
         self._expectation_value = None
         
     def set_t_range(self, new_range):
@@ -348,41 +372,17 @@ class Expectation_Value_Evolution(Single_Updatable_Line_Base):
         return self
         
     def _line_data_init(self):
-        self._time_evolution = self._axis.plot(self._t, self._expectation_value(self._t), color="0.0", linewidth=1, linestyle="-", animated=True)
-        self._marker = self._axis.scatter(self._time, self._expectation_value(self._time), s=200, c="0.0", marker="+", linewidths=[1])
-        self._lines = self._time_evolution + [self._marker]
+        self._time_evolution = self._axis.plot(self._t, self._expectation_value(self._t), color=self._color, linewidth=self._lw, linestyle=self._ls, animated=True)
+        self._lines = self._time_evolution
 
     def _line_data_updater(self):
         self._time_evolution[0].set_data(self._t, self._expectation_value(self._t))
-        self._marker.set_offsets([self._time, self._expectation_value(self._time)])
-        self._lines = self._time_evolution + [self._marker]
+        self._lines = self._time_evolution 
 
     @property
     def line(self) -> plt.Line2D:
         return self._time_evolution
-
-    @property
-    def marker(self) -> PathCollection:
-        return self._marker
     
-class Expectation_Value_Evolution_Markers(Single_Updatable_Plot):
-    def __init__(self, state: pib.Particle_in_Box_State, fig: plt.Figure, axis: plt.Axes) -> None:
-        super().__init__(state, fig, axis=axis)
-        self._marker = None
-        self._expectation_value = None
-
-    def _line_data_init(self) -> None:
-        self._marker = self._axis.scatter(self._time, self._expectation_value(self._time), s=200, c="0.0", marker="+", linewidths=[1])
-        return [self._marker]
-
-    def _line_data_updater(self) -> None:
-        self._marker.set_offsets([self._time, self._expectation_value(self._time)])
-        return [self._marker]
-
-    @property
-    def marker(self) -> PathCollection:
-        return self._marker
-
 class Position_Expectation_Value_Evolution(Expectation_Value_Evolution):
     def __init__(self, state: pib.Particle_in_Box_State, fig: plt.Figure, axis: plt.Axes=None) -> None:
         super().__init__(state, fig, axis=axis)
@@ -398,6 +398,49 @@ class Pos_Exp_Deriv_Evolution(Expectation_Value_Evolution):
         super().__init__(state, fig, axis=axis)
         self._expectation_value = lambda t: self._state.x_space_expectation_value_derivative(t)
 
+
+class Expectation_Value_Evolution_Markers(Single_Updatable_Plot):
+    def __init__(self, state: pib.Particle_in_Box_State, fig: plt.Figure, axis: plt.Axes) -> None:
+        super().__init__(state, fig, axis=axis)
+        self._marker = None
+        self._expectation_value = None
+        self._color = "0.0"
+        self._lw = 1
+        self._size = 200
+    
+    def _init_config(self, arg_dict: dict):
+        for key, value in arg_dict.items():
+            if key=="color":
+                self._color = key
+            elif key=="thickness":
+                self._lw = value
+            elif key=="size":
+                self._size = value
+
+    def _line_config(self, arg_dict: dict):
+        for key, value in arg_dict.items():
+            if key=="color":
+                self._color = value
+                self._marker.set_color(value)
+            elif key=="thickness":
+                self._lw = value
+                self._marker.set_linewidth(value)
+            elif key=="size":
+                self._size = value
+                self._marker.set_sizes([value])
+
+    def _line_data_init(self) -> None:
+        self._marker = self._axis.scatter(self._time, self._expectation_value(self._time), s=self._size, c=self._color, marker="+", linewidths=[self._lw])
+        self._lines = [self._marker]
+
+    def _line_data_updater(self) -> None:
+        self._marker.set_offsets([self._time, self._expectation_value(self._time)])
+        self._lines = [self._marker]
+
+    @property
+    def marker(self) -> PathCollection:
+        return self._marker
+
 class Position_Expectation_Value_Marker(Expectation_Value_Evolution_Markers):
     def __init__(self, state: pib.Particle_in_Box_State, fig: plt.Figure, axis: plt.Axes=None) -> None:
         super().__init__(state, fig, axis)
@@ -408,6 +451,10 @@ class Momentum_Expectation_Value_Marker(Expectation_Value_Evolution_Markers):
         super().__init__(state, fig, axis)
         self._expectation_value = lambda t: self._state.new_k_space_expectation_value(t)
 
+
+class Energy_Space_Plot(Single_Updatable_Plot):
+    def __init__(self, state: pib.Particle_in_Box_State, fig: plt.Figure, axis: plt.Axes=None) -> None:
+        super().__init__(state, fig, axis=axis)
 
 class Update_Plot_Collection(Updatable_Plot):
     def __init__(self, fig: plt.Figure, *plots: Single_Updatable_Plot) -> None:
@@ -463,3 +510,13 @@ class Update_Plot_Collection(Updatable_Plot):
     def plot(self):
         for plot in self._plots:
             plot.plot()
+
+
+def expectation_value_evolution():
+    pass
+
+def momentum_space_plot():
+    pass
+
+def postion_space_plot():
+    pass
