@@ -322,7 +322,7 @@ class Position_Space_Projection:
         return expectation_value
 
     def exp_t_deriv_immediate_evaluate(self, t: np.ndarray) -> np.ndarray:
-        exp_t_deriv = np.zero(np.shape(t))
+        exp_t_deriv = np.zeros(np.shape(t))
         for rh_index in range(1, self._sp.num_energy_states):
             for lh_index in range(0, rh_index):
                 exp_t_deriv += self._exp_t_deriv_components[lh_index, rh_index](t)
