@@ -26,8 +26,18 @@ class Updatable_Plot(ABC):
     customizable plotting it is therefore more efficient to create the plots 
     from scratch by using, e.g., matplotlib. 
     """
-    def __init__(self, fig: plt.Figure) -> None:
+    def __init__(self, fig: plt.Figure, identifier: str=None) -> None:
         self._fig = fig
+        self._identifier = identifier
+
+    @property
+    def identifier(self):
+        return self._identifier
+
+    @identifier.setter
+    def identifier(self, new_identifier):
+        self._identifier = new_identifier
+
 
     @abstractmethod
     def plot(self) -> plt.Line2D:
@@ -64,8 +74,8 @@ class Updatable_Plot(ABC):
 
 
 class Single_Updatable_Plot(Updatable_Plot):
-    def __init__(self, state: pib.Particle_in_Box_State, fig: plt.Figure, axis: plt.Axes=None) -> None:
-        super().__init__(fig)
+    def __init__(self, state: pib.Particle_in_Box_State, fig: plt.Figure, axis: plt.Axes=None, identifier: str=None) -> None:
+        super().__init__(fig, identifier=identifier)
         self._state = state
         self._time = 0
         self._lines = None
@@ -106,9 +116,9 @@ class Single_Updatable_Plot(Updatable_Plot):
             self._init_config(kwargs)
         return self
 
-    def _anim_t(self, start, system_time_per_frame) -> Callable[[int], List[plt.Line2D]]:
-        self._time = start
+    def _anim_t(self, start, system_time_per_frame) -> Callable[[int], List[plt.Line2D]]: 
         self.plot()
+        self._time = start
         def anim(i):
             self._time = start+i*system_time_per_frame
             self._line_data_updater()
@@ -140,8 +150,8 @@ class Single_Updatable_Plot(Updatable_Plot):
         return self._axis
 
 class Single_Updatable_Line_Base(Single_Updatable_Plot):
-    def __init__(self, state: pib.Particle_in_Box_State, fig: plt.Figure, axis: plt.Axes=None) -> None:
-        super().__init__(state, fig, axis=axis)    
+    def __init__(self, state: pib.Particle_in_Box_State, fig: plt.Figure, axis: plt.Axes=None, identifier: str=None) -> None:
+        super().__init__(state, fig, axis=axis, identifier=identifier)    
         self._res = 300
         self._color = dark_blue
         self._ls = "-"
@@ -185,9 +195,21 @@ class Single_Updatable_Line_Base(Single_Updatable_Plot):
         self._res = new_res
 
 class Single_Updatable_Vertical_Line(Single_Updatable_Plot):
-    def __init__(self, state: pib.Particle_in_Box_State, fig: plt.Figure, axis: plt.Axes=None) -> None:
-        super().__init__(state, fig, axis=axis)
+    def __init__(self, state: pib.Particle_in_Box_State, fig: plt.Figure, axis: plt.Axes=None, identifier: str=None) -> None:
+        super().__init__(state, fig, axis=axis, identifier=identifier)
         self._line = None
+        self._x = None
+        self._color = "0.0"
+        self._lw = 1
+        self._ls= "--"
+
+    def _line_data_init(self) -> None:
+        self._line = self._axis.axvline(self._x(self._time), color=self._color, linestyle=self._ls, linewidth=self._lw, animated=True)
+        self._lines = [self._line]
+
+    def _line_data_updater(self) -> None:
+        self._line.set_data([self._x(self._time), self._x(self._time)], [0, 1])    
+        self._lines = [self._line]
 
     def _init_config(self, arg_dict: dict):
         for key, value in arg_dict.items():
@@ -210,9 +232,19 @@ class Single_Updatable_Vertical_Line(Single_Updatable_Plot):
                 self._lw = value
                 self._line.set_linewidth(value)
 
+    def plot(self) -> plt.Line2D:
+        super().plot()
+        return self._line
+
+    @property
+    def line(self) -> plt.Line2D:
+        return self._line
+
+
+
 class Single_Updatable_Line(Single_Updatable_Line_Base):
-    def __init__(self, state: pib.Particle_in_Box_State, fig: plt.Figure, axis: plt.Axes=None) -> None:
-        super().__init__(state, fig, axis=axis)  
+    def __init__(self, state: pib.Particle_in_Box_State, fig: plt.Figure, axis: plt.Axes=None, identifier: str=None) -> None:
+        super().__init__(state, fig, axis=axis, identifier=identifier) 
         self._x = None
         self._y = None
 
@@ -223,8 +255,8 @@ class Single_Updatable_Line(Single_Updatable_Line_Base):
         self._lines[0].set_data(self._x, self._y(self._time))
 
 class Position_Space_Plot(Single_Updatable_Line):
-    def __init__(self, state: pib.Particle_in_Box_State, mode: str, fig: plt.Figure, axis: plt.Axes=None) -> None:
-        super().__init__(state, fig, axis=axis)
+    def __init__(self, state: pib.Particle_in_Box_State, mode:str, fig: plt.Figure, axis: plt.Axes=None, identifier: str=None) -> None:
+        super().__init__(state, fig, axis=axis, identifier=identifier)
         self.update()
         self.set_mode(mode)
         
@@ -242,15 +274,16 @@ class Position_Space_Plot(Single_Updatable_Line):
         return self
 
 class Momentum_Space_Plot(Single_Updatable_Line):
-    def __init__(self, state: pib.Particle_in_Box_State, mode: str, fig: plt.Figure, axis: plt.Axes=None) -> None:
-        super().__init__(state, fig, axis=axis)
-        self._n_bound = 15
+    def __init__(self, state: pib.Particle_in_Box_State, mode:str, fig: plt.Figure, axis: plt.Axes=None, identifier: str=None) -> None:
+        super().__init__(state, fig, axis=axis, identifier=identifier)
+        self._n_bound = int(max(self._state._sp.energy_states)*1.5)
         self._deviation_factor = 1.0001
         self.update()
         self.set_mode(mode)
 
     def set_n_bound(self, new_bound) -> Momentum_Space_Plot:
         self._n_bound = new_bound
+        self.update()
         return self
 
     def update(self) -> None:
@@ -268,9 +301,9 @@ class Momentum_Space_Plot(Single_Updatable_Line):
         return self
 
 class New_Momentum_Space_Plot(Single_Updatable_Plot):
-    def __init__(self, state: pib.Particle_in_Box_State, mode: str, fig: plt.Figure, axis: plt.Axes=None) -> None:
-        super().__init__(state, fig, axis=axis)
-        self._bound = 15
+    def __init__(self, state: pib.Particle_in_Box_State, mode:str, fig: plt.Figure, axis: plt.Axes=None, identifier: str=None) -> None:
+        super().__init__(state, fig, axis=axis, identifier=identifier)
+        self._bound = int(max(self._state._sp.energy_states)*1.5)
         self._bars = None
         self._color = light_blue
         self.update()
@@ -325,43 +358,21 @@ class New_Momentum_Space_Plot(Single_Updatable_Plot):
         return self.bars
 
 
-class Expectation_Value_Line(Single_Updatable_Plot):
-    def __init__(self, state: pib.Particle_in_Box_State, fig: plt.Figure, axis: plt.Axes=None) -> None:
-        super().__init__(state, fig, axis=axis)
-        self._line = None
-        self._expectation_value = None
 
-    def _line_data_init(self) -> None:
-        self._line = self._line = self._axis.axvline(self._expectation_value(self._time), color="0.0", linewidth=1, linestyle="--", animated=True)
-        self._lines = [self._line]
-    
-    def _line_data_updater(self) -> None:
-        expectation_value_position = self._expectation_value(self._time)
-        self._line.set_data([expectation_value_position, expectation_value_position],[0,1])
-        self._lines = [self._line]
+class Position_Expectation_Value(Single_Updatable_Vertical_Line):
+    def __init__(self, state: pib.Particle_in_Box_State, fig: plt.Figure, axis: plt.Axes=None, identifier: str=None) -> None:
+        super().__init__(state, fig, axis=axis, identifier=identifier) 
+        self._x = lambda t: self._state.x_space_expectation_value(t)
 
-    def plot(self) -> plt.Line2D:
-        super().plot()
-        return self._line
-
-    @property
-    def line(self) -> plt.Line2D:
-        return self._line  
-
-class Position_Expectation_Value(Expectation_Value_Line):
-    def __init__(self, state: pib.Particle_in_Box_State, fig: plt.Figure, axis: plt.Axes=None) -> None:
-        super().__init__(state, fig, axis=axis)
-        self._expectation_value = lambda t: self._state.x_space_expectation_value(t)
-
-class Momentum_Expectation_Value(Expectation_Value_Line):
-    def __init__(self, state: pib.Particle_in_Box_State, fig: plt.Figure, axis: plt.Axes=None) -> None:
-        super().__init__(state, fig, axis=axis)
-        self._expectation_value = lambda t: self._state.new_k_space_expectation_value(t)
+class Momentum_Expectation_Value(Single_Updatable_Vertical_Line):
+    def __init__(self, state: pib.Particle_in_Box_State, fig: plt.Figure, axis: plt.Axes=None, identifier: str=None) -> None:
+        super().__init__(state, fig, axis=axis, identifier=identifier) 
+        self._x = lambda t: self._state.new_k_space_expectation_value(t)
 
 
 class Expectation_Value_Evolution(Single_Updatable_Line_Base):
-    def __init__(self, state: pib.Particle_in_Box_State, fig: plt.Figure, axis: plt.Axes=None) -> None:
-        super().__init__(state, fig, axis=axis)
+    def __init__(self, state: pib.Particle_in_Box_State, fig: plt.Figure, axis: plt.Axes=None, identifier: str=None) -> None:
+        super().__init__(state, fig, axis=axis, identifier=identifier) 
         self.set_t_range([0,10])
         self._time_evolution = None
         self._expectation_value = None
@@ -382,26 +393,26 @@ class Expectation_Value_Evolution(Single_Updatable_Line_Base):
     @property
     def line(self) -> plt.Line2D:
         return self._time_evolution
-    
+        
 class Position_Expectation_Value_Evolution(Expectation_Value_Evolution):
-    def __init__(self, state: pib.Particle_in_Box_State, fig: plt.Figure, axis: plt.Axes=None) -> None:
-        super().__init__(state, fig, axis=axis)
+    def __init__(self, state: pib.Particle_in_Box_State, fig: plt.Figure, axis: plt.Axes=None, identifier: str=None) -> None:
+        super().__init__(state, fig, axis=axis, identifier=identifier)
         self._expectation_value = lambda t: self._state.x_space_expectation_value(t)
         
 class Momentum_Expectation_Value_Evolution(Expectation_Value_Evolution):
-    def __init__(self, state: pib.Particle_in_Box_State, fig: plt.Figure, axis: plt.Axes=None) -> None:
-        super().__init__(state, fig, axis=axis)
+    def __init__(self, state: pib.Particle_in_Box_State, fig: plt.Figure, axis: plt.Axes=None, identifier: str=None) -> None:
+        super().__init__(state, fig, axis=axis, identifier=identifier)
         self._expectation_value = lambda t: self._state.new_k_space_expectation_value(t)
 
 class Pos_Exp_Deriv_Evolution(Expectation_Value_Evolution):
-    def __init__(self, state: pib.Particle_in_Box_State, fig: plt.Figure, axis: plt.Axes=None) -> None:
-        super().__init__(state, fig, axis=axis)
+    def __init__(self, state: pib.Particle_in_Box_State, fig: plt.Figure, axis: plt.Axes=None, identifier: str=None) -> None:
+        super().__init__(state, fig, axis=axis, identifier=identifier)
         self._expectation_value = lambda t: self._state.x_space_expectation_value_derivative(t)
 
 
 class Expectation_Value_Evolution_Markers(Single_Updatable_Plot):
-    def __init__(self, state: pib.Particle_in_Box_State, fig: plt.Figure, axis: plt.Axes) -> None:
-        super().__init__(state, fig, axis=axis)
+    def __init__(self, state: pib.Particle_in_Box_State, fig: plt.Figure, axis: plt.Axes=None, identifier: str=None) -> None:
+        super().__init__(state, fig, axis=axis, identifier=identifier)
         self._marker = None
         self._expectation_value = None
         self._color = "0.0"
@@ -442,26 +453,65 @@ class Expectation_Value_Evolution_Markers(Single_Updatable_Plot):
         return self._marker
 
 class Position_Expectation_Value_Marker(Expectation_Value_Evolution_Markers):
-    def __init__(self, state: pib.Particle_in_Box_State, fig: plt.Figure, axis: plt.Axes=None) -> None:
+    def __init__(self, state: pib.Particle_in_Box_State, fig: plt.Figure, axis: plt.Axes=None, identifier: str=None) -> None:
         super().__init__(state, fig, axis)
         self._expectation_value = lambda t: self._state.x_space_expectation_value(t)
 
 class Momentum_Expectation_Value_Marker(Expectation_Value_Evolution_Markers):
-    def __init__(self, state: pib.Particle_in_Box_State, fig: plt.Figure, axis: plt.Axes=None) -> None:
+    def __init__(self, state: pib.Particle_in_Box_State, fig: plt.Figure, axis: plt.Axes=None, identifier: str=None) -> None:
         super().__init__(state, fig, axis)
         self._expectation_value = lambda t: self._state.new_k_space_expectation_value(t)
 
+class Expectation_Value_Evolution_Time(Single_Updatable_Vertical_Line):
+    def __init__(self, state: pib.Particle_in_Box_State, fig: plt.Figure, axis: plt.Axes=None, identifier: str=None) -> None:
+        super().__init__(state, fig, axis=axis, identifier=identifier)
+        self._x = lambda t: t
+
 
 class Energy_Space_Plot(Single_Updatable_Plot):
-    def __init__(self, state: pib.Particle_in_Box_State, fig: plt.Figure, axis: plt.Axes=None) -> None:
-        super().__init__(state, fig, axis=axis)
+    def __init__(self, state: pib.Particle_in_Box_State, fig: plt.Figure, axis: plt.Axes=None, identifier: str=None) -> None:
+        super().__init__(state, fig, axis=axis, identifier=identifier)
+        self._bars = None
+        self._color = light_blue
+        self.update()
+
+    def update(self) -> None:
+        self._l = self._state.energy_space_wavefunction.energies
+        self._cl = self._state.energy_space_wavefunction.energy_projection_coefficients
+        self._barwidth = 0.8*(self._l[1]-self._l[0]) if len(self._l) > 1 else 0.8
+
+    def _line_data_init(self) -> None:
+        self._bars = self._axis.bar(self._l, self._cl, self._barwidth, color=self._color, animated=True)
+        self._lines = list(self._bars)
+
+    def _line_data_updater(self) -> None:
+        for bar, h in zip(self._bars, self._cl):
+            bar.set_height(h)
+        self._lines = list(self._bars)
+
+    def plot(self) -> plt.Line2D:
+        super().plot()
+        return self._bars
+
+    @property
+    def bars(self) -> BarContainer:
+        return self._bars
+        
 
 class Update_Plot_Collection(Updatable_Plot):
-    def __init__(self, fig: plt.Figure, *plots: Single_Updatable_Plot) -> None:
-        super().__init__(fig)
+    def __init__(self, fig: plt.Figure, *plots: Single_Updatable_Plot, identifier: str=None) -> None:
+        super().__init__(fig, identifier=identifier)
         self._plots = list(plots)
         for plot in self._plots:
             if plot._fig != fig:
+                self._plots.remove(plot)
+    
+    def add_plot(self, plot: Single_Updatable_Plot) -> None:
+        self._plots.append(plot)
+
+    def remove_plot(self, identifier: str) -> None:
+        for plot in self._plots:
+            if plot.identifier==identifier:
                 self._plots.remove(plot)
 
     def _anim_generic(self, anim_list):
@@ -503,7 +553,7 @@ class Update_Plot_Collection(Updatable_Plot):
 
     def set_n_bound(self, new_bound) -> Update_Plot_Collection:
         for plot in self._plots:
-            if isinstance(plot, (New_Momentum_Space_Plot, Momentum_Space_Plot)):
+            if isinstance(plot, (New_Momentum_Space_Plot, Momentum_Space_Plot, Update_Plot_Collection)):
                 plot.set_n_bound(new_bound)
         return self
 
@@ -511,12 +561,88 @@ class Update_Plot_Collection(Updatable_Plot):
         for plot in self._plots:
             plot.plot()
 
+    def __getitem__(self, key: str):
+        for plot in self._plots:
+            if plot._identifier==key:
+                return plot
 
-def expectation_value_evolution():
-    pass
+def postion_space_plot(state: pib.Particle_in_Box_State, fig: plt.Figure, 
+                                ax: plt.Axes=None, abs_square=True, real_part=False, 
+                                imag_part=False, expectation_value=True) -> Update_Plot_Collection:
+    
+    colors = [dark_blue, mid_blue, light_blue]
+    plots = Update_Plot_Collection(fig, identifier="pos_space_plot")
 
-def momentum_space_plot():
-    pass
+    if not ax:
+        ax = fig.add_subplot()
+    if imag_part:
+        plots.add_plot(Position_Space_Plot(state, "imag", fig, ax, "imag_part").plot_config(color=colors[2]))
+    if real_part:
+        plots.add_plot(Position_Space_Plot(state, "real", fig, ax, "real_part").plot_config(color=colors[1]))
+    if abs_square:
+        plots.add_plot(Position_Space_Plot(state, "abs_square", fig, ax, "abs_square").plot_config(color=colors[0]))
+    if expectation_value:
+        plots.add_plot(Position_Expectation_Value(state, fig, ax, "expectation_value"))
 
-def postion_space_plot():
-    pass
+    return plots
+
+def momentum_space_plot(state: pib.Particle_in_Box_State, fig: plt.Figure, 
+                                ax: plt.Axes=None, abs_square=True, real_part=False, 
+                                imag_part=False) -> Update_Plot_Collection:
+    
+    colors = [dark_blue, mid_blue, light_blue]
+    plots = Update_Plot_Collection(fig, identifier="momentum_space_plot")
+
+    if not ax:
+        ax = fig.add_subplot()
+    if imag_part:
+        plots.add_plot(Momentum_Space_Plot(state, "imag", fig, ax, "imag_part").plot_config(color=colors[2]))
+    if real_part:
+        plots.add_plot(Momentum_Space_Plot(state, "real", fig, ax, "real_part").plot_config(color=colors[1]))
+    if abs_square:
+        plots.add_plot(Momentum_Space_Plot(state, "abs_square", fig, ax, "abs_square").plot_config(color=colors[0]))
+
+    return plots
+
+def new_momentum_space_plot(state: pib.Particle_in_Box_State, fig: plt.Figure, 
+                                ax: plt.Axes=None, abs_square=True, real_part=False, 
+                                imag_part=False, expectation_value=True) -> Update_Plot_Collection:
+    
+    colors = [dark_blue, mid_blue, light_blue]
+    plots = Update_Plot_Collection(fig, identifier="new_momentum_space_plot")
+
+    if not ax:
+        ax = fig.add_subplot()
+    if imag_part:
+        plots.add_plot(New_Momentum_Space_Plot(state, "imag", fig, ax, "imag_part").plot_config(color=colors[2]))
+    if real_part:
+        plots.add_plot(New_Momentum_Space_Plot(state, "real", fig, ax, "real_part").plot_config(color=colors[1]))
+    if abs_square:
+        plots.add_plot(New_Momentum_Space_Plot(state, "abs_square", fig, ax, "abs_square").plot_config(color=colors[0]))
+    if expectation_value:
+        plots.add_plot(Momentum_Expectation_Value(state, fig, ax, "expectation_value"))
+
+    return plots
+
+def expectation_value_evolution(state: pib.Particle_in_Box_State, fig: plt.Figure, ax: plt.Axes=None,
+                                position_expectation_value=True, momentum_expectation_value=True,
+                                time_marker_position=False, time_marker_momentum=False,
+                                time_indicator_line=False):
+    colors = ["0.0", "0.3"]
+    plots = Update_Plot_Collection(fig, identifier="expectation_value_evolution")
+
+    if not ax:
+        ax = fig.add_subplot()  
+    if momentum_expectation_value:
+        plots.add_plot(Momentum_Expectation_Value_Evolution(state, fig, ax, "momentum_expectation_value").plot_config(color=colors[1]))
+    if position_expectation_value:
+        plots.add_plot(Position_Expectation_Value_Evolution(state, fig, ax, "position_expectation_value").plot_config(color=colors[0]))
+    if time_marker_position:
+        plots.add_plot(Position_Expectation_Value_Marker(state, fig, ax, "time_marker_position"))
+    if time_marker_momentum:
+        plots.add_plot(Momentum_Expectation_Value_Marker(state, fig, ax, "time_marker_momentum"))
+    if time_indicator_line:
+        plots.add_plot(Expectation_Value_Evolution_Time(state, fig, ax, "time_indicator_line"))
+
+    return plots
+
