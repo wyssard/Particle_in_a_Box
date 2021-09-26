@@ -355,7 +355,7 @@ class New_Momentum_Space_Plot(Single_Updatable_Plot):
 
     @property
     def bars(self) -> BarContainer:
-        return self.bars
+        return self._bars
 
 
 
