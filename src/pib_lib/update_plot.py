@@ -616,7 +616,7 @@ class Update_Plot_Collection(Updatable_Plot):
             if plot._identifier==key:
                 return plot
 
-def postion_space_plot(state: pib.Particle_in_Box_State, fig: plt.Figure, 
+def position_space_plot(state: pib.Particle_in_Box_State, fig: plt.Figure, 
                                 ax: plt.Axes=None, abs_square=True, real_part=False, 
                                 imag_part=False, expectation_value=True) -> Update_Plot_Collection:
     
