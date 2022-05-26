@@ -597,7 +597,7 @@ class Update_Plot_Collection(Updatable_Plot):
 
     def set_t_range(self, new_range) -> Update_Plot_Collection:
         for plot in self._plots:
-            if isinstance(plot, Expectation_Value_Evolution):
+            if isinstance(plot, (Expectation_Value_Evolution, Update_Plot_Collection)):
                 plot.set_t_range(new_range)
         return self
 
