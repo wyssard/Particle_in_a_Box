@@ -307,11 +307,13 @@ class Single_Updatable_Line(Single_Updatable_Line_Base):
 class Position_Space_Plot(Single_Updatable_Line):
     def __init__(self, state: pib.Particle_in_Box_State, mode:str, fig: plt.Figure, axis: plt.Axes=None, identifier: str=None) -> None:
         super().__init__(state, fig, axis=axis, identifier=identifier)
+        self._width_persentage = 0.999
         self.update()
         self.set_mode(mode)
-        
+            
     def update(self) -> None:
-        self._x = np.linspace(-self._state.L/2, self._state.L/2, self._res)
+        bound = self._state.L*self._width_persentage/2
+        self._x = np.linspace(-bound, bound, self._res)
 
     def set_mode(self, new_mode) -> Position_Space_Plot:
         self._mode = new_mode
