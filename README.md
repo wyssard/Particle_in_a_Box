@@ -30,7 +30,7 @@ This library was not primarily written to analyze the self-adjointness of the Ha
 
 
 ## Installation
-To install the library, [download](https://github.com/Basistransformoptimusprime/Particle_in_a_Box/releases) the repo as a zip file and run a pip install in your python environment (supported from version 0.2.0 onwards, earlier versions only persist for documentation purposes):
+To install the library, [download](https://github.com/Basistransformoptimusprime/Particle_in_a_Box/tags) the repo as a zip file and run a pip install in your python environment (supported from version 0.2.0 onwards, earlier versions only persist for documentation purposes):
 ```
 pip install <download-directory>/Particle_in_a_Box-<version>.zip
 ```
