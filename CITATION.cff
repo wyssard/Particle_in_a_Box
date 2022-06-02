@@ -1,0 +1,23 @@
+cff-version: 1.2.0
+title: Pib Lib
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - given-names: Valentin
+    family-names: Wyss
+    email: valentin.wyss@bluewin.ch
+    affiliation: >-
+      Institute for Theoretical Physics at the
+      University of Bern
+repository-code: >-
+  https://github.com/Basistransformoptimusprime/Particle_in_a_Box
+keywords:
+  - python
+  - quantum-mechanics
+  - matplotlib
+  - self-adjointness
+license: MIT
+version: 0.2.0
+date-released: '2022-05-28'
