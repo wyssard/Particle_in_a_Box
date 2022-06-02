@@ -1,8 +1,11 @@
+[![DOI](https://zenodo.org/badge/363083885.svg)](https://zenodo.org/badge/latestdoi/363083885)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 # Pib Lib
 A small Python library to compute and visualize the time evolution of the quantum mechanical state of a particle in a one-dimensional box.
 
 ## Theoretical Background 
-> **_Note:_** _to understand this section, one should be familiar with basic quantum mechanics and the concept of self-adjointness (not to be confused with hermiticity). To get a complete understanding of the library's capabilities, a perusal of the literature referred to below is likely to be necessary._
+> **_Note:_** _to understand this section, one should be familiar with basic quantum mechanics and the concept of self-adjointness (not to be confused with Hermiticity). To get a complete understanding of the library's capabilities, a perusal of the literature referred to below is likely to be necessary._
 
 When discussing the behavior of a quantum mechanical particle in a one-dimensional box, i.e., one a finite interval $[-L/2, L/2]$, one usually imposes Dirichlet boundary conditions in order to quantize the energy eigenstates. That is, for the eigenfunctions $\psi_l$ of the Hamiltonian $H=-\frac{1}{2m}\partial_x^2$, we require $\psi_l(\pm\frac{L}{2})=0$, having in mind the conservation of the probability current. Besides that, these boundary conditions also provide the self-adjointness of the Hamiltonian which is necessary for the energy eigenstates to be orthogonal and the eigenvalues to be real (and thus for the Hamiltonian to describe a physical concept). It turns out, however, that much more general boundary conditions can be allowed that still provide the conservation of the probability current and the self-adjointness of the resulting Hamiltonian. These boundary conditions, parametrized by two real parameters $\gamma_+$ and $\gamma_-$, are so-called **Robin Boundary Conditions** which read: 
 $$ \gamma_{\pm}\psi\left(\pm\tfrac{L}{2}\right) \pm\partial_x\psi\left(\pm\tfrac{L}{2}\right) = 0. $$
