@@ -1,0 +1,39 @@
+#!/usr/bin/env python
+
+from setuptools import config
+from datetime import date
+import yaml
+from git import Repo
+import os
+
+dir_path = os.path.dirname(os.path.realpath(__file__))
+rel_path = "..\\"
+rel_citation = ".\\CITATION.cff"
+rel_cfg = ".\\setup.cfg"
+full_path = os.path.join(dir_path, rel_path)
+
+meta = config.read_configuration(rel_cfg)["metadata"]
+version = meta["version"]
+
+with open(rel_citation, "r") as cff:
+    citation = yaml.safe_load(cff.read())
+
+if "version" in citation:
+    if not citation["version"] == version: 
+        print("Updated metadata 'version' in 'CITATION.cff' to {}".format(version))
+        citation["version"] = version
+        citation["date-released"] = str(date.today())
+
+        with open(rel_citation, "w") as cff:
+            yaml.safe_dump(citation, cff, sort_keys=False)   
+
+else:
+    print("Created metadata in 'CITATION.cff': 'version' = {}".format(version))
+    citation["version"] = version
+    citation["date-released"] = str(date.today())
+    
+    with open(rel_citation, "w") as cff:
+        yaml.safe_dump(citation, cff, sort_keys=False)   
+
+repo = Repo(full_path)
+repo.git.add(rel_citation)
