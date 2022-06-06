@@ -78,29 +78,6 @@ class Updatable_Plot(ABC):
         """
         pass
 
-    """    
-    def anim(self, var: str, start: float, stop: float, fps: int, speed: float, system_var_per_frame: float) -> FuncAnimation:
-        eff_time_per_frame = 1/fps
-        if var=="t":
-            system_time_per_frame = eff_time_per_frame*speed
-            num_frames = (stop-start)*fps/speed
-
-            # indeed; (stop-start)*fps/speed = (stop-start)/(speed/fps), where
-            # speed/fps = eff_time_per_frame*speed = system_time_per_frame, thus
-            # (stop-start)*fps/speed = (stop-start)/system_time_per_frame
-            # respectively: sytem_time_per_frame = (stop-start)/num_frames
-
-            anim=self._anim_t(start, system_time_per_frame)
-        elif var=="L":
-
-            anim=self._anim_L(start, system_var_per_frame)
-        elif var=="gamma":
-            anim=self._anim_gamma(start, system_var_per_frame)
-
-        fanim = FuncAnimation(self._fig, anim, int(num_frames), interval=eff_time_per_frame*1000, blit=True)
-        return fanim
-    """
-
     def anim(self, var: str, start: float, stop: float, fps: int, real_time: float) -> FuncAnimation:
         """Function to produce animations of continuous changes of certain 
         variables of the state. It yet supports animation of the time [t], the
