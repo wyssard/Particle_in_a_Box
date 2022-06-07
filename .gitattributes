@@ -1,0 +1,5 @@
+# Let linguist treat .ipynb files as .py files for cleaner language statistics
+*.ipynb linguist-language=Python
+
+# Exclude generated code from language statistics
+*.html linguist-generated
