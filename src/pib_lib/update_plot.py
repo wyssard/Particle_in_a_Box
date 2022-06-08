@@ -18,7 +18,21 @@ mid_red = cs.hls_to_rgb(0, 0.67, 1)
 dark_red = cs.hls_to_rgb(0, 0.37, 1)
 
 def revival_time(state: pib.Particle_in_Box_State) -> float:
-    return 4*state.m*state.L**2/np.pi
+    """Get the revival time of a particle in a box state. Depending on the
+    boundary conditions, an exact revival may or may not occur. Since
+    a revival is guaranteed for Dirichlet, Neumann and mixed 
+    Dirichlet Neumann boundary conditions, this function assumes that the 
+    boundary condition of the state is one of the latter."""
+    assert (state.case in ("dirichlet", "neumann", "dirichlet_neumann")), (
+        """An exact revival time is only implemented for Dirichlet, Neumann 
+        and Dirichlet-Neumann boundary conditions. For boundary condition other 
+        than these, an exact revival time may not even exist""")
+
+    T = 4*state.m*state.L**2/np.pi
+    if state.case in ("dirichlet", "neumann"):
+        return T
+    elif state.case == "dirichet_neumann":
+        return T/2
 
 class Updatable_Plot(ABC):
     """This class provides basic visualization functionality (based on 
@@ -586,9 +600,11 @@ class Update_Plot_Collection(Updatable_Plot):
                 plot.set_n_bound(new_bound)
         return self
 
-    def plot(self):
+    def plot(self) -> List[plt.Line2D]:
+        plots = []
         for plot in self._plots:
-            plot.plot()
+            plots.append(plot.plot())
+        return plots
 
     def __getitem__(self, key: str):
         for plot in self._plots:
