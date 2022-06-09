@@ -64,6 +64,7 @@ class Bouncing_Gaussian(pib.Particle_in_Box_Immediate_Mode):
             return int(L/np.pi*k_0 - 1)
 
     def __init__(self, case: str, L: float, m: float, l_0: int, l_range: int, a: float) -> None:
+        assert case in ("dirichlet", "neumann", "dirichlet_neumann"), "Supports only Dirichlet, Neumann and Dirichlet-Neumann boundary conditions"
         super().__init__(case, L, m)
         
         self._l_0 = l_0
