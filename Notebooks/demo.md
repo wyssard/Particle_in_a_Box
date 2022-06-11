@@ -105,7 +105,7 @@ pos_exp_val = state.x_space_expectation_value
 new_k_exp_val = state.new_k_space_expectation_value
 ```
 
-Of theoretical interest as well is the time derivative of the position expectation value $\tfrac{d}{dt}\langle \hat{x} \rangle(t)$. Access to this quantity provides numerical means to verify the [Ehrenfest Theorem](http://www.wiese.itp.unibe.ch/theses/herrmann_bachelor.pdf#chapter.4) for the new momentum concept, i.e. the relation $$\langle \hat{p}_R \rangle = m \tfrac{d}{dt}\langle \hat{x} \rangle(t).$$
+Of theoretical interest as well is the time derivative of the position expectation value $\tfrac{d}{dt}\langle \hat{x} \rangle(t)$. Access to this quantity provides numerical means to verify the [Ehrenfest Theorem](http://www.wiese.itp.unibe.ch/theses/herrmann_bachelor.pdf#chapter.4) for the new momentum concept, i.e. the relation $$\langle \hat{p}_R \rangle(t) = m \tfrac{d}{dt}\langle \hat{x} \rangle(t).$$
 
 
 ```python
@@ -274,7 +274,7 @@ plt.close()
 # To get more information on animation objects such as the one created here, 
 # please consider the documentation of matplotlib.animation.Animation objects.
 # Below, the animation is written to a html file.
-with open("simple_pos_densitiy_anim.html", "w") as f:
+with open("html_anim\\simple_pos_density_anim.html", "w") as f:
     f.write(anim.to_jshtml())
 ```
 
@@ -374,7 +374,7 @@ To animate an `Update_Plot_Collection` we proceed in the exact same manor as for
 
 ```python
 anim = collection.anim("t", 0, T, 20, 20)
-with open("simple_collection_anim.html", "w") as f:
+with open("html_anim\\simple_collection_anim.html", "w") as f:
     f.write(anim.to_jshtml())
 ```
 
@@ -463,7 +463,7 @@ collection.add_plot(time_markers)
 
 # Render the animation to an html file
 anim = collection.anim("t", 0, 10, 20, 5)
-with open("sophisticated_collection_anim.html", "w") as f:
+with open("html_anim\\sophisticated_collection_anim.html", "w") as f:
     f.write(anim.to_jshtml())
 ```
 
