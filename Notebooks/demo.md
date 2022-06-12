@@ -34,11 +34,11 @@ Creation of a generic particle-in-a-box state $\lvert \psi(t) \rangle$ with the 
 - `m`: Mass of the particle in natural units
 - `states`: Array containing the quantum numbers of the energy eigenstates we want to superimpose. To understand which states the respective quantum numbers refer to, please see [Self-Adjoint Hamiltonian](http://www.wiese.itp.unibe.ch/theses/wyss_bachelor.pdf#section.2.2).
 - `amps`: Amplitudes of the latter states. If the resulting state is not normalized to one, the state will be normalized automatically; hence the entries of the list are to be considered relative amplitudes.
-- `boundary_condition`: one of `symmetric`, `anti_symmetric`, `dirichlet`, `neumann`, `dirichlet_neumann`, `symmetric_nummeric`, `anti_symmetric_nummeric`.
+- `boundary_condition`: one of `symmetric`, `anti_symmetric`, `dirichlet`, `neumann`, `dirichlet_neumann`, `symmetric_numeric`, `anti_symmetric_numeric`.
 Please see sections [2.2](http://www.wiese.itp.unibe.ch/theses/wyss_bachelor.pdf#section.2.2) and [2.3](http://www.wiese.itp.unibe.ch/theses/wyss_bachelor.pdf#section.2.3) of the [bachelor thesis](http://www.wiese.itp.unibe.ch/theses/wyss_bachelor.pdf) this library was designed for, and the introduction in [`README.md`](../README.md) to get a better understanding of the boundary conditions.
 - `gamma`: Parameter characterizing the boundary condition of a self-adjoint Hamilton operator depending on choice of `boudary_condition` 
-  - for `symmetric` and `symmetric_nummeric` : $\verb|gamma| = \gamma_+ = \gamma_-$ (see [section 2.3.1](http://www.wiese.itp.unibe.ch/theses/wyss_bachelor.pdf#section.2.3))
-  - for `anti_symmetric` and `anti_symmeric_nummeric`: $\verb|gamma| = \gamma_+ = -\gamma_-$ (see [section 2.3.2](http://www.wiese.itp.unibe.ch/theses/wyss_bachelor.pdf#section.2.3))
+  - for `symmetric` and `symmetric_numeric` : $\verb|gamma| = \gamma_+ = \gamma_-$ (see [section 2.3.1](http://www.wiese.itp.unibe.ch/theses/wyss_bachelor.pdf#section.2.3))
+  - for `anti_symmetric` and `anti_symmeric_numeric`: $\verb|gamma| = \gamma_+ = -\gamma_-$ (see [section 2.3.2](http://www.wiese.itp.unibe.ch/theses/wyss_bachelor.pdf#section.2.3))
 
 
 ```python
@@ -75,7 +75,7 @@ momentum_space_proj = state.k_space_wavefunction
 ```
 
 It is important to keep in mind, that these functions are only the projections onto the respective spaces but not the probability distributions.
-The latter functions take as arguments a continuous value of position (that is, of momentum respectively) and the time:
+The latter functions take as arguments a continuous value of position (that is, of momentum respectively) and time:
 
 
 ```python
@@ -90,7 +90,7 @@ The library also implements the projection onto the eigenfunctions of the operat
 new_momentum_space_proj = state.new_k_space_wavefunction
 ```
 
-Notice that the latter function is to be understood as $\verb|new_momentum_space_proj|(n, t) = \langle k_n \vert \psi(t) \rangle$, i.e. as a function in the discrete new momentum quantum number $n$ and the time $t$. Evaluation hence reads:
+Notice that the latter function is to be understood as $\verb|new_momentum_space_proj|(n, t) = \langle k_n \vert \psi(t) \rangle$, i.e. as a function in the discrete new momentum quantum number $n$ and time $t$. Evaluation hence reads:
 
 
 ```python
@@ -116,12 +116,12 @@ We will encounter all of these attributes again, when considering the plotting f
 
 ### More Tools to Work with States
 
-Among the attributes of the `Particle_in_Box_State` object, the user also has intended access to the `boundary_lib` which provides a collection of methods, specific to the boundary conditions of the Hamiltonian, that are used by the internals of the library but may also be used directly, e.g. for testing purposes. The following example shows how to manually approximate the expectation of the new momentum at $t=0$.
+Among the attributes of the `Particle_in_Box_State` object, the user also has intended access to the `boundary_lib` which provides a collection of methods, specific to the boundary conditions of the Hamiltonian, that are used by the internals of the library but may also be used directly, e.g. for testing purposes. The following example shows how to manually approximate the expectation value of the new momentum at $t=0$.
 
 
 ```python
 # We firts define the arange of momentum quantum numbers, we want to consider 
-# for the nummerical approximation of the expectation value of p_R at t = 0
+# for the numerical approximation of the expectation value of p_R at t = 0
 n_range = np.arange(-1000, 1000)
 
 # We then use the boundary_lib object of our state to retrieve the momenta that
@@ -158,11 +158,11 @@ Other methods provided by the `boundary_lib` include:
 ### ...with simple `Updatable_Plot` objects
 
 To easily create plots of the above considered projections of the state $\lvert\psi(t)\rangle$, we can use simple `Updatable_Plot` objects; these include:
-- Basic Plots of projections of $\lvert \psi(t) \rangle$
+- Basic plots of projections of $\lvert \psi(t) \rangle$
   - `Position_Space_Plot`
   - `Momentum_Space_Plot`
   - `New_Momentum_Space_Plot`
-- Vertical Lines to indicate expectation values of $\hat{x}$ and $\hat{p}_R$
+- Vertical lines to indicate expectation values of $\hat{x}$ and $\hat{p}_R$
   - `Position_Expectation_Value`
   - `Momentum_Expectation_Value`
 - Plots that show the respective expectation values as functions of $t$
@@ -441,12 +441,12 @@ legend = expectation_ax.legend()
     
 
 
-To conclude this section, we create an animated version of the latter plot. We thereby also include three more plot objects that indicate the time of the animation in the expectation evolution figure. 
+To conclude this section, we create an animated version of the latter plot. We thereby also include three more plot objects that indicate the time of the animation in the expectation value evolution figure. 
 
 
 ```python
 # Create marker, to indicate the position and new momentum expectation value
-# at a specific point of time in the expectation value evolution plot
+# at a specific point in time in the expectation value evolution plot
 pos_marker = up.Position_Expectation_Value_Marker(state, fig, expectation_ax)
 new_k_marker = up.Momentum_Expectation_Value_Marker(state, fig, expectation_ax)
 

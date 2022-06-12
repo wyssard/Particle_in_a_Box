@@ -45,11 +45,11 @@ class State_Properties:
         elif case == "anti_symmetric":
             self._boundary_lib = Boundaries.Anti_Symmetric_Boundary(self._L, self._gamma, self._theta, self._l_kl_map)
 
-        elif case == "symmetric_nummeric":
-            self._boundary_lib = Boundaries.Symmetric_Nummeric(self._L, self._gamma, self._theta, self._l_kl_map)
+        elif case == "symmetric_numeric":
+            self._boundary_lib = Boundaries.Symmetric_Numeric(self._L, self._gamma, self._theta, self._l_kl_map)
 
-        elif case == "anti_symmetric_nummeric":
-            self._boundary_lib = Boundaries.Anti_Symmetric_Nummeric(self._L, self._gamma, self._theta, self._l_kl_map)
+        elif case == "anti_symmetric_numeric":
+            self._boundary_lib = Boundaries.Anti_Symmetric_Numeric(self._L, self._gamma, self._theta, self._l_kl_map)
 
     @property
     def case(self) -> str:

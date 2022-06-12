@@ -526,7 +526,7 @@ class Anti_Symmetric_Boundary(New_Style_Boundary):
         super().__init__(L, gamma, theta, l_to_kl_mapper_ref)
 
     @staticmethod
-    def x_space_projection_for_nummerics(L, gamma, l, kl) -> Function_of_n:
+    def x_space_projection_for_numerics(L, gamma, l, kl) -> Function_of_n:
         phase_factor = lambda l: np.exp(1j*np.arctan((gamma*L)/(np.pi*l))) if l%2 == 0 else np.exp(-1j*np.arctan((np.pi*l)/(gamma*L)))
 
         if np.imag(kl) == 0:
@@ -550,7 +550,7 @@ class Anti_Symmetric_Boundary(New_Style_Boundary):
         L = self._L
         kl = self._l_kl_map.get_kl(l)
 
-        return self.x_space_projection_for_nummerics(L, gamma, l, kl)
+        return self.x_space_projection_for_numerics(L, gamma, l, kl)
 
     def get_x_matrix_element(self, lhs_state: int, rhs_state: int) -> complex:
         gamma = self._gamma
@@ -559,8 +559,8 @@ class Anti_Symmetric_Boundary(New_Style_Boundary):
         lhs_k = self._l_kl_map.get_kl(lhs_state)
         rhs_k = self._l_kl_map.get_kl(rhs_state)
 
-        lhs_integrand = self.x_space_projection_for_nummerics(L, gamma, lhs_state, lhs_k)
-        rhs_integrand = self.x_space_projection_for_nummerics(L, gamma, rhs_state, rhs_k)
+        lhs_integrand = self.x_space_projection_for_numerics(L, gamma, lhs_state, lhs_k)
+        rhs_integrand = self.x_space_projection_for_numerics(L, gamma, rhs_state, rhs_k)
         integrand = lambda x: np.conj(lhs_integrand(x))*x*rhs_integrand(x)
         real = quad(lambda x: np.real(integrand(x)), -L/2, L/2)[0]
         imag = quad(lambda x: np.imag(integrand(x)), -L/2, L/2)[0]
@@ -572,7 +572,7 @@ class Anti_Symmetric_Boundary(New_Style_Boundary):
         L = self._L
         kl = self._l_kl_map.get_kl(l)
 
-        x_space_proj = self.x_space_projection_for_nummerics(L, gamma, l, kl)
+        x_space_proj = self.x_space_projection_for_numerics(L, gamma, l, kl)
 
         def converter(k_range: np.ndarray) -> np.ndarray:
             if isinstance(k_range, (int, float)):
@@ -604,8 +604,8 @@ class Anti_Symmetric_Boundary(New_Style_Boundary):
         lhs_k = self._l_kl_map.get_kl(lhs_state)
         rhs_k = self._l_kl_map.get_kl(rhs_state)
 
-        lhs_integrand = self.x_space_projection_for_nummerics(L, gamma, lhs_state, lhs_k)
-        rhs_integrand = self.x_space_projection_for_nummerics(L, gamma, rhs_state, rhs_k)
+        lhs_integrand = self.x_space_projection_for_numerics(L, gamma, lhs_state, lhs_k)
+        rhs_integrand = self.x_space_projection_for_numerics(L, gamma, rhs_state, rhs_k)
 
         integrand = lambda x: (-1j)*np.conj(lhs_integrand(x))*derivative(rhs_integrand, x, 0.0001)
 
@@ -616,7 +616,7 @@ class Anti_Symmetric_Boundary(New_Style_Boundary):
         return real + 1j*imag
     
 
-class Symmetric_Nummeric(Symmetric_Boundary):
+class Symmetric_Numeric(Symmetric_Boundary):
     def __init__(self, L: float, gamma: float, theta: float, l_to_kl_mapper_ref: l_to_kl_mapper) -> None:
         super().__init__(L, gamma, theta, l_to_kl_mapper_ref)
         self._n_range = 100
@@ -648,7 +648,7 @@ class Symmetric_Nummeric(Symmetric_Boundary):
         self._n_range = new_n_range
 
 
-class Anti_Symmetric_Nummeric(Anti_Symmetric_Boundary):
+class Anti_Symmetric_Numeric(Anti_Symmetric_Boundary):
     def __init__(self, L: float, gamma: float, theta: float, l_to_kl_mapper_ref: l_to_kl_mapper) -> None:
         super().__init__(L, gamma, theta, l_to_kl_mapper_ref)
         self._n_range = 100
