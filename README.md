@@ -3,7 +3,7 @@
 
 # Pib Lib
 A small Python library to compute and visualize the time evolution of the quantum mechanical state of a particle in a one-dimensional box.
-> Due to an issue concerning the integration of LaTeX in GitHub Markdown, some expressions are not rendered properly. For the time being, it is therefore suggested to consider the raw data of any Markdown file in this repository. 
+> Due to an issue concerning the integration of LaTeX in GitHub Markdown, some expressions are not rendered properly. For the time being, it is therefore suggested to also consider the raw data of any Markdown file in this repository. 
 
 ## Theoretical Background 
 > **_Note:_** _to understand this section, one should be familiar with basic quantum mechanics and the concept of self-adjointness (not to be confused with Hermiticity). To get a complete understanding of the library's capabilities, a perusal of the literature referred to below is likely to be necessary._
